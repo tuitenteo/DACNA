@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 const verifyToken = require("./middleware/auth");
 const multer = require("multer");
 const path = require("path");
+const nodemailer = require("nodemailer");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -35,7 +36,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  password: "kyanh",
+  //password: "kyanh",
+  password: "123123",
   port: 5432,
 });
 
@@ -116,10 +118,66 @@ app.post("/api/quenmatkhau", async (req, res) => {
       return res.status(404).json({ message: "Email không tồn tại" });
     }
 
-    res.json({ message: `Mật khẩu mới là: ${matkhauMoi}` });
+    // Gửi email chứa mật khẩu mới
+    const transporter = nodemailer.createTransport({
+      host: "smtp.mailersend.net",
+      port: 587,
+      secure: false, // upgrade later with STARTTLS
+      auth: {
+        user: "MS_KGFCTD@test-yxj6lj997rq4do2r.mlsender.net",
+        pass: "mssp.nPx9gbB.pxkjn41p9d04z781.NxvABFN",
+      },
+    });
+
+    const mailOptions = {
+      from: "MS_KGFCTD@test-yxj6lj997rq4do2r.mlsender.net",
+      to: email,
+      subject: "Khôi phục mật khẩu",
+      text: `Mật khẩu mới của bạn là: ${matkhauMoi}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: "Mật khẩu mới đã được gửi qua email." });
   } catch (error) {
     console.error("Lỗi:", error);
-    res.status(500).json({ message: "Lỗi máy chủ" });
+    res.status(500).json({ message: "Không thể gửi email." });
+  }
+});
+
+app.put("/api/doimatkhau", verifyToken, async (req, res) => {
+  const { matkhauCu, matkhauMoi } = req.body;
+  const userId = req.user?.id; // Lấy ID người dùng từ token
+
+  if (!matkhauCu || !matkhauMoi) {
+    return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin." });
+  }
+
+  try {
+    // Kiểm tra mật khẩu cũ
+    const user = await pool.query(
+      "SELECT matkhau FROM nguoidung WHERE idnguoidung = $1",
+      [userId]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "Người dùng không tồn tại." });
+    }
+
+    if (user.rows[0].matkhau !== matkhauCu) {
+      return res.status(401).json({ message: "Mật khẩu cũ không đúng." });
+    }
+
+    // Cập nhật mật khẩu mới
+    await pool.query(
+      "UPDATE nguoidung SET matkhau = $1 WHERE idnguoidung = $2",
+      [matkhauMoi, userId]
+    );
+
+    res.status(200).json({ message: "Đổi mật khẩu thành công." });
+  } catch (err) {
+    console.error("Lỗi đổi mật khẩu:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi đổi mật khẩu." });
   }
 });
 
@@ -217,10 +275,10 @@ app.post("/api/dangnhap", async (req, res) => {
       return res.status(401).json({ message: "Mật khẩu không đúng" });
     }
 
-    // ✅ Tạo JWT token
+    //Tạo JWT token
     const token = jwt.sign(
       {
-        id: user.rows[0].id,
+        id: user.rows[0].idnguoidung,
         tendangnhap: user.rows[0].tendangnhap,
         vaitro: user.rows[0].vaitro,
         email: user.rows[0].email,
@@ -228,7 +286,7 @@ app.post("/api/dangnhap", async (req, res) => {
       SECRET_KEY,
       { expiresIn: "2h" }
     );
-    console.log("JWT Token:", token);
+    //console.log("JWT Token:", token);
     res.status(200).json({
       message: "Đăng nhập thành công",
       token,
@@ -727,6 +785,40 @@ app.get('/api/vattu/nhacungcap/:idncc', verifyToken, async (req, res) => {
   } catch (err) {
     console.error("Lỗi lấy vật tư theo nhà cung cấp:", err);
     res.status(500).json({ message: "Lỗi khi lấy vật tư của nhà cung cấp." });
+  }
+});
+
+//send email toi ncc
+app.post("/api/send-email", verifyToken, async (req, res) => {
+  const { email, subject, message } = req.body;
+
+  if (!email || !subject || !message) {
+    return res.status(400).json({ message: "Thiếu thông tin email, tiêu đề hoặc nội dung." });
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.mailersend.net",
+      port: 587,
+      secure: false, // upgrade later with STARTTLS
+      auth: {
+        user: "MS_KGFCTD@test-yxj6lj997rq4do2r.mlsender.net",
+        pass: "mssp.nPx9gbB.pxkjn41p9d04z781.NxvABFN",
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: subject,
+      text: message,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "Email đã được gửi thành công." });
+  } catch (error) {
+    console.error("Lỗi gửi email:", error);
+    res.status(500).json({ message: "Không thể gửi email." });
   }
 });
 

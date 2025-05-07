@@ -36,7 +36,6 @@ const QuenMatKhau = () => {
           />
           </div>
           <button onClick={handleReset}>Lấy lại mật khẩu</button>
-          <p>{thongbao}</p>
           <p
             onClick={() => navigate("/login")}
             style={{ color: "blue", cursor: "pointer" }}

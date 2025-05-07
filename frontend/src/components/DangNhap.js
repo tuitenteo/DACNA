@@ -26,8 +26,8 @@ const DangNhap = () => {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("userRole", response.data.user.vaitro);
 
-      console.log("JWT Token:", response.data.token);
-      console.log("Vai trò người dùng:", response.data.user.vaitro);
+      //console.log("JWT Token:", response.data.token);
+      //console.log("Vai trò người dùng:", response.data.user.vaitro);
 
       navigate("/dashboard");
     } catch (error) {
