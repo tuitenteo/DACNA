@@ -124,13 +124,13 @@ app.post("/api/quenmatkhau", async (req, res) => {
       port: 587,
       secure: false, // upgrade later with STARTTLS
       auth: {
-        user: "MS_KGFCTD@test-yxj6lj997rq4do2r.mlsender.net",
-        pass: "mssp.nPx9gbB.pxkjn41p9d04z781.NxvABFN",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
       },
     });
 
     const mailOptions = {
-      from: "MS_KGFCTD@test-yxj6lj997rq4do2r.mlsender.net",
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Khôi phục mật khẩu",
       text: `Mật khẩu mới của bạn là: ${matkhauMoi}`,
@@ -802,8 +802,8 @@ app.post("/api/send-email", verifyToken, async (req, res) => {
       port: 587,
       secure: false, // upgrade later with STARTTLS
       auth: {
-        user: "MS_KGFCTD@test-yxj6lj997rq4do2r.mlsender.net",
-        pass: "mssp.nPx9gbB.pxkjn41p9d04z781.NxvABFN",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
       },
     });
 
