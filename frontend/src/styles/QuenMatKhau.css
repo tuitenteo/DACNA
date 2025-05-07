@@ -1,0 +1,35 @@
+.pw-page {
+    background-image: url('../assets/medicalbackground.png'); 
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+  
+  .pw-container {
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 50px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .pw-form {
+    max-width: 350px;
+    text-align: center;
+    font-size: 18px;
+  }
+
+  .input-group {
+    margin-bottom: 10px;
+  }
+  
+  .input-group input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 18px;
+  }

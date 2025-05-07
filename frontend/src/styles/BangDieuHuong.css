@@ -1,0 +1,55 @@
+/* AppBar styles */
+.appbar {
+    background-color: var(--background-default);
+    color: var(--text-primary);
+    box-shadow: none;
+    border-bottom: 1px solid #ccc;
+    z-index: 1201; /* Đảm bảo AppBar nằm trên Sidebar */
+  }
+  
+  /* Toolbar styles */
+  .toolbar-icon {
+    margin-right: 16px;
+  }
+  
+  .toolbar-logo {
+    display: flex;
+    align-items: center;
+    pointer-events: none; /* Ngăn chặn sự kiện click */
+  }
+  
+  .toolbar-logo img {
+    width: 70px;
+    height: 70px;
+    margin-right: 10px;
+    pointer-events: none; /* Ngăn chặn sự kiện click */
+  }
+  
+  .toolbar-logo-text {
+    font-weight: bold;
+    color: #0056B7;
+    font-size: 30px;
+    pointer-events: none; /* Ngăn chặn sự kiện click */
+  }
+  
+  /* Drawer styles */
+  .drawer {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-right: 1px solid #ccc;
+    position: fixed;
+    top: 64px; /* Đặt dưới AppBar */
+    height: calc(100vh - 64px); /* Chiều cao trừ đi AppBar */
+    overflow-y: auto; /* Cho phép cuộn riêng Sidebar */
+  }
+  
+  .drawer-paper {
+    box-sizing: border-box;
+  }
+  
+  /* Content area styles */
+  .content-area {
+    flex-grow: 1;
+    padding: 16px;
+    font-size: 16px;
+  }

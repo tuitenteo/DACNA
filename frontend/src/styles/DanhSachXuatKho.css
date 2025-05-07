@@ -1,0 +1,14 @@
+.custom-datepicker {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%; /* Tùy chỉnh chiều rộng */
+}
+
+.date-style{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom:15px;
+}

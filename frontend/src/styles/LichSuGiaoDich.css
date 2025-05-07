@@ -1,0 +1,48 @@
+/* ô thời giangian */
+.custom-datepicker {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%; /* Tùy chỉnh chiều rộng */
+}
+/* ô tìm kiếm */
+.searchinput {
+    padding: 8px;
+    margin-bottom: 20px;
+    width: 640px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+/* Ngay bắt đầu Ngày kết thúcthúc */
+.date-style{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+/* Số dòngdòng */
+.line-style{
+    padding: 8px;
+    margin-left: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+/* Bảng giao dịchdịch */
+.table-transaction{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+/* Nút phân trang chung */
+.pagebutton-style {
+    padding: 10px 20px;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+

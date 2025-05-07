@@ -1,0 +1,24 @@
+.da-het-han {
+    background-color: #d9d9d9 !important; /* Màu đỏ */
+    color: grey !important;
+}
+
+.sap-het-han {
+    background-color: #e01e37 !important; /* Màu cam */
+    color: white !important;
+}
+
+.ton-kho-it {
+    background-color: #fb8500 !important; /* Màu vàng */
+    color: white !important;
+}
+
+.ton-kho-du {
+    background-color: #38b000 !important; /* Màu xanh lá */
+    color: white !important;
+}
+
+.het-vat-tu {
+    background-color: #e5e5e5 !important; /* Màu xám nhạt */
+    color: grey !important; /* Màu chữ đen */
+}

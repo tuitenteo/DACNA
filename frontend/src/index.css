@@ -1,0 +1,12 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif; /* Sử dụng font hệ thống thay vì tải từ Google Fonts */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  visibility: visible; /* Đảm bảo văn bản luôn hiển thị ngay lập tức */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
