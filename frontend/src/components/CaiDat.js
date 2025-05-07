@@ -1,11 +1,14 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../App'; // Import UserContext
-import { Switch, Typography, Button, Card, Box, Grid } from '@mui/material';
+import { Switch, Typography, Button, Card, Box, Grid, TextField } from '@mui/material';
 
 const CaiDat = () => {
     const navigate = useNavigate();
     const { mode, toggleTheme } = useContext(UserContext); // Lấy mode và toggleTheme từ context
+    const [matkhauCu, setMatkhauCu] = useState("");
+    const [matkhauMoi, setMatkhauMoi] = useState("");
+    const [thongbao, setThongbao] = useState("");
 
     const handleLogout = () => {
         // Xóa thông tin người dùng khỏi localStorage
@@ -38,47 +41,111 @@ const CaiDat = () => {
         }
     };
 
-return (
-    <Box sx={{ padding: '20px', maxWidth: 600, margin: 'auto' }}>
-        <Card sx={{ padding: '20px', boxShadow: 3 }}>
-            <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', color: 'primary.main' }}>
-                Cài đặt
-            </Typography>
+    const handleChangePassword = async () => {
+        try {
+            const res = await fetch("http://localhost:5000/api/doimatkhau", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+                body: JSON.stringify({ matkhauCu, matkhauMoi }),
+            });
 
-            <Box sx={{ marginBottom: '20px' }}>
-                <Typography variant="body1" sx={{ marginRight: '10px', display: 'inline-block' }}>
-                    Chế độ: {mode === 'light' ? 'Sáng' : 'Tối'}
+            const data = await res.json();
+            if (res.ok) {
+                setThongbao("Đổi mật khẩu thành công.");
+                setMatkhauCu("");
+                setMatkhauMoi("");
+            } else {
+                setThongbao(data.message || "Có lỗi xảy ra.");
+            }
+        } catch (error) {
+            console.error("Lỗi đổi mật khẩu:", error);
+            setThongbao("Lỗi hệ thống.");
+        }
+    };
+
+    return (
+        <Box sx={{ padding: '20px', maxWidth: 600, margin: 'auto' }}>
+            <Card sx={{ padding: '20px', boxShadow: 3 }}>
+                <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', color: 'primary.main' }}>
+                    Cài đặt
                 </Typography>
-                <Switch
-                    checked={mode === 'dark'}
-                    onChange={toggleTheme} // Gọi hàm toggleTheme khi người dùng thay đổi
-                />
-            </Box>
 
-            <Grid container spacing={2} justifyContent="center">
-                <Grid item>
-                    <Button 
-                        variant="contained" 
-                        color="primary" 
-                        onClick={handleLogout}
-                        sx={{ width: '200px' }} // Chiều rộng nút
-                    >
-                        Đăng xuất
-                    </Button>
+                <Box sx={{ marginBottom: '20px' }}>
+                    <Typography variant="body1" sx={{ marginRight: '10px', display: 'inline-block' }}>
+                        Chế độ: {mode === 'light' ? 'Sáng' : 'Tối'}
+                    </Typography>
+                    <Switch
+                        checked={mode === 'dark'}
+                        onChange={toggleTheme} // Gọi hàm toggleTheme khi người dùng thay đổi
+                    />
+                </Box>
+
+                <Grid container spacing={2} justifyContent="center">
+                    <Grid item>
+                        <Button 
+                            variant="contained" 
+                            color="primary" 
+                            onClick={handleLogout}
+                            sx={{ width: '200px' }} // Chiều rộng nút
+                        >
+                            Đăng xuất
+                        </Button>
+                    </Grid>
+                    <Grid item>
+                        <Button 
+                            variant="outlined" 
+                            color="secondary" 
+                            onClick={handleBackup} 
+                            sx={{ width: '200px' }} // Chiều rộng nút
+                        >
+                            Sao lưu dữ liệu
+                        </Button>
+                    </Grid>
                 </Grid>
-                <Grid item>
-                    <Button 
-                        variant="outlined" 
-                        color="secondary" 
-                        onClick={handleBackup} 
-                        sx={{ width: '200px' }} // Chiều rộng nút
+
+                <Box sx={{ marginTop: '20px' }}>
+                    <Typography variant="h6" gutterBottom>
+                        Đổi mật khẩu
+                    </Typography>
+                    <TextField
+                        label="Mật khẩu cũ"
+                        type="password"
+                        fullWidth
+                        value={matkhauCu}
+                        onChange={(e) => setMatkhauCu(e.target.value)}
+                        sx={{ marginBottom: '10px' }}
+                    />
+                    <TextField
+                        label="Mật khẩu mới"
+                        type="password"
+                        fullWidth
+                        value={matkhauMoi}
+                        onChange={(e) => setMatkhauMoi(e.target.value)}
+                        sx={{ marginBottom: '10px' }}
+                    />
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleChangePassword}
+                        fullWidth
                     >
-                        Sao lưu dữ liệu
+                        Đổi mật khẩu
                     </Button>
-                </Grid>
-            </Grid>
-        </Card>
-    </Box>
-);
+                    {thongbao && (
+                        <Typography
+                            variant="body2"
+                            sx={{ color: 'red', marginTop: '10px', textAlign: 'center' }}
+                        >
+                            {thongbao}
+                        </Typography>
+                    )}
+                </Box>
+            </Card>
+        </Box>
+    );
 };
+
 export default CaiDat;
