@@ -36,6 +36,7 @@ import ChiTietAppbar from "./ChiTietAppbar";
 import TonKho from "./TonKho";
 import NhaCungCap from "./NhaCungCap";
 import ThongKeGiaoDich from "./ThongKeGiaoDich";
+import NhapKho from "./NhapKho";
 import logo from "../assets/myicon.png";
 import { useTheme } from "@mui/material/styles";
 
@@ -328,6 +329,7 @@ const BangDieuHuong = () => {
               <Route path="nguoidung" element={<NguoiDung />} />
               <Route path="caidat" element={<CaiDat />} />
               <Route path="danhmucvattu" element={<DanhMucVatTu />} />
+              <Route path="nhapkho" element={<NhapKho />} />
               <Route path="xuatkho" element={<XuatKho />} />
               <Route path="lichsugiaodich" element={<LichSuGiaoDich />} />
               <Route path="tonkho" element={<TonKho />} />
