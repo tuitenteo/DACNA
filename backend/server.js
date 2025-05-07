@@ -1,0 +1,735 @@
+require("dotenv").config(); // Load biến môi trường từ file .env
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const { Pool } = require("pg");
+const jwt = require("jsonwebtoken");
+const verifyToken = require("./middleware/auth");
+const multer = require("multer");
+const path = require("path");
+
+const app = express();
+const port = process.env.PORT || 5000;
+const SECRET_KEY = process.env.SECRET_KEY; // ✅ Dùng từ .env
+// Cấu hình thư mục lưu file PDF
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Lưu file vào thư mục "uploads"
+  },
+  filename: (req, file, cb) => {
+    cb(null, `phieu_xuat_kho_${Date.now()}.pdf`);
+  },
+});
+const upload = multer({ storage: storage });
+
+app.use(express.json());
+app.use(cors());
+app.use(bodyParser.json());
+
+// Public folder để người dùng có thể tải file
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
+// PostgreSQL Pool
+const pool = new Pool({
+  user: "postgres",
+  host: "localhost",
+  database: "QLNK",
+  password: "kyanh",
+  port: 5432,
+});
+
+// Sample route
+app.get("/api/nguoidung", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM nguoidung");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+app.put("/api/nguoidung/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { tendangnhap, matkhau, vaitro, email, trangthai } = req.body;
+
+  if (!tendangnhap || !matkhau || !vaitro || !email) {
+    return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
+  }
+
+  try {
+    // Kiểm tra xem email đã tồn tại chưa
+    const emailExists = await pool.query(
+      "SELECT * FROM nguoidung WHERE email = $1 AND idnguoidung != $2",
+      [email, id]
+    );
+    if (emailExists.rows.length > 0) {
+      return res.status(400).json({ message: "Email đã được sử dụng." });
+    }
+
+    // Cập nhật thông tin người dùng
+    const result = await pool.query(
+      `UPDATE nguoidung 
+       SET tendangnhap = $1, 
+           matkhau = $2, 
+           vaitro = $3, 
+           email = $4, 
+           trangthai = $5
+       WHERE idnguoidung = $6 RETURNING *`,
+      [tendangnhap, matkhau, vaitro, email, trangthai || "active", id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật người dùng thành công.",
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Error updating user:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật người dùng." });
+  }
+});
+
+app.post("/api/quenmatkhau", async (req, res) => {
+  const { email } = req.body;
+
+  const generateRandomPassword = (length = 8) => {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  const matkhauMoi = generateRandomPassword();
+
+  try {
+    const result = await pool.query(
+      "UPDATE nguoidung SET matkhau = $1 WHERE email = $2 RETURNING *",
+      [matkhauMoi, email]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Email không tồn tại" });
+    }
+
+    res.json({ message: `Mật khẩu mới là: ${matkhauMoi}` });
+  } catch (error) {
+    console.error("Lỗi:", error);
+    res.status(500).json({ message: "Lỗi máy chủ" });
+  }
+});
+
+app.delete("/api/nguoidung/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Kiểm tra vai trò của người dùng
+    const user = await pool.query(
+      "SELECT vaitro FROM nguoidung WHERE idnguoidung = $1",
+      [id]
+    );
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
+    }
+
+    if (user.rows[0].vaitro === "Admin") {
+      return res.status(403).json({ message: "Không thể xóa tài khoản Admin" });
+    }
+
+    // Kiểm tra giao dịch liên quan
+    const transactionCheck = await pool.query(
+      "SELECT COUNT(*) AS count FROM lichsugiaodich WHERE idnguoidung = $1",
+      [id]
+    );
+    if (transactionCheck.rows[0].count > 0) {
+      return res
+        .status(400)
+        .json({ message: "Không thể xóa người dùng có giao dịch liên quan" });
+    }
+
+    // Xóa người dùng
+    await pool.query("DELETE FROM nguoidung WHERE idnguoidung = $1", [id]);
+    res.status(200).json({ message: "Xóa thành công" });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+app.post("/api/dangky", async (req, res) => {
+  const { tendangnhap, matkhau, vaitro, email } = req.body;
+
+  if (!tendangnhap || !matkhau || !vaitro || !email) {
+    return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
+  }
+
+  try {
+    // Kiểm tra tên đăng nhập đã tồn tại
+    const userExists = await pool.query(
+      "SELECT * FROM nguoidung WHERE tendangnhap = $1",
+      [tendangnhap]
+    );
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ message: "Tên đăng nhập đã tồn tại." });
+    }
+
+    // Kiểm tra email đã tồn tại
+    const emailExists = await pool.query(
+      "SELECT * FROM nguoidung WHERE email = $1",
+      [email]
+    );
+    if (emailExists.rows.length > 0) {
+      return res.status(400).json({ message: "Email đã được sử dụng." });
+    }
+
+    // Thêm người dùng mới
+    await pool.query(
+      "INSERT INTO nguoidung (tendangnhap, matkhau, vaitro, email) VALUES ($1, $2, $3, $4)",
+      [tendangnhap, matkhau, vaitro, email]
+    );
+
+    res.status(201).json({ message: "Đăng ký thành công." });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Lỗi server." });
+  }
+});
+
+app.post("/api/dangnhap", async (req, res) => {
+  const { tendangnhap, matkhau } = req.body;
+
+  try {
+    const user = await pool.query(
+      "SELECT * FROM nguoidung WHERE tendangnhap = $1",
+      [tendangnhap]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(400).json({ message: "Tên đăng nhập không đúng" });
+    }
+
+    // So sánh mật khẩu gốc
+    if (matkhau !== user.rows[0].matkhau) {
+      return res.status(401).json({ message: "Mật khẩu không đúng" });
+    }
+
+    // ✅ Tạo JWT token
+    const token = jwt.sign(
+      {
+        id: user.rows[0].id,
+        tendangnhap: user.rows[0].tendangnhap,
+        vaitro: user.rows[0].vaitro,
+        email: user.rows[0].email,
+      },
+      SECRET_KEY,
+      { expiresIn: "2h" }
+    );
+    console.log("JWT Token:", token);
+    res.status(200).json({
+      message: "Đăng nhập thành công",
+      token,
+      user: user.rows[0],
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+app.put("/api/nguoidung/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { tendangnhap, matkhau, vaitro, trangthai } = req.body;
+
+  if (!tendangnhap || !matkhau || !vaitro) {
+    return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
+  }
+
+  try {
+    // Kiểm tra xem người dùng có tồn tại không
+    const user = await pool.query(
+      "SELECT * FROM nguoidung WHERE idnguoidung = $1",
+      [id]
+    );
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "Người dùng không tồn tại." });
+    }
+
+    // Cập nhật thông tin người dùng
+    const result = await pool.query(
+      `UPDATE nguoidung 
+       SET tendangnhap = $1, 
+           matkhau = $2, 
+           vaitro = $3, 
+           trangthai = $4
+       WHERE idnguoidung = $5 RETURNING *`,
+      [tendangnhap, matkhau, vaitro, trangthai || "active", id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật người dùng thành công.",
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Error updating user:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật người dùng." });
+  }
+});
+
+
+app.get("/danhmuc", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM danhmucvattu");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/vattu", verifyToken, async (req, res) => {
+  const { idDanhMuc } = req.query; // Lấy idDanhMuc từ query string
+
+  try {
+    let query = `
+      SELECT 
+        VT.IDVatTu, 
+        VT.TenVatTu, 
+        DM.TenDanhMuc, 
+        VT.DonVi, 
+        VT.MoTa, 
+        VT.NgayHetHan, 
+        VT.CachLuuTru, 
+        TK.TonKhoHienTai,
+        CTLH.DonGiaNhap AS DonGia
+      FROM TonKho TK
+      LEFT JOIN VatTu VT ON TK.IDVatTu = VT.IDVatTu
+      LEFT JOIN DanhMucVatTu DM ON VT.IDDanhMuc = DM.IDDanhMuc
+      LEFT JOIN (
+  SELECT IDVatTu, MAX(DonGiaNhap) AS DonGiaNhap
+  FROM ChiTietLoHang
+  GROUP BY IDVatTu
+) CTLH ON VT.IDVatTu = CTLH.IDVatTu
+    `;
+
+    const params = [];
+    if (idDanhMuc) {
+      query += " WHERE DM.IDDanhMuc = $1";
+      params.push(idDanhMuc);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.post("/xuatkho", verifyToken, async (req, res) => {
+  const { vatTuGroups, NguoiYeuCau, IDNguoiDung } = req.body;
+
+  if (!vatTuGroups?.length || !NguoiYeuCau || !IDNguoiDung) {
+    return res.status(400).json({
+      success: false,
+      message: "Vui lòng điền đầy đủ thông tin vật tư, người yêu cầu và người dùng.",
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN"); // Bắt đầu transaction
+
+    // Kiểm tra người dùng
+    const userResult = await client.query(
+      "SELECT * FROM NguoiDung WHERE IDNguoiDung = $1",
+      [IDNguoiDung]
+    );
+    if (userResult.rows.length === 0) {
+      throw new Error("Người dùng không tồn tại.");
+    }
+
+    // Kiểm tra tất cả vật tư trước khi tạo phiếu
+    for (const group of vatTuGroups) {
+      const IDVatTu = parseInt(group.IDVatTu, 10);
+      const SoLuong = parseInt(group.SoLuong, 10);
+
+      if (isNaN(IDVatTu) || isNaN(SoLuong) || SoLuong <= 0) {
+        throw new Error("ID vật tư hoặc số lượng không hợp lệ.");
+      }
+
+      const vatTuRes = await client.query("SELECT * FROM VatTu WHERE IDVatTu = $1", [IDVatTu]);
+      if (vatTuRes.rows.length === 0) {
+        throw new Error(`Vật tư với ID ${IDVatTu} không tồn tại.`);
+      }
+
+      const stockRes = await client.query("SELECT TonKhoHienTai FROM TonKho WHERE IDVatTu = $1", [IDVatTu]);
+      const stock = stockRes.rows[0]?.tonkhohientai ?? 0;
+
+      if (SoLuong > stock) {
+        throw new Error(`Số lượng vượt tồn kho hiện tại cho vật tư ID ${IDVatTu}.`);
+      }
+    }
+
+    // Tạo phiếu xuất kho
+    const xuatKhoRes = await client.query("INSERT INTO XuatKho DEFAULT VALUES RETURNING IDXuatKho");
+    const IDXuatKho = xuatKhoRes.rows[0].idxuatkho;
+
+    // Thêm chi tiết vật tư
+    for (const group of vatTuGroups) {
+      const IDVatTu = parseInt(group.IDVatTu, 10);
+      const SoLuong = parseInt(group.SoLuong, 10);
+      await client.query(
+        "INSERT INTO ChiTietXuatKho (IDXuatKho, IDVatTu, SoLuong, NguoiYeuCau, IDNguoiDung) VALUES ($1, $2, $3, $4, $5)",
+        [IDXuatKho, IDVatTu, SoLuong, NguoiYeuCau, IDNguoiDung]
+      );
+    }
+
+    // Lấy thông tin chi tiết
+    const result = await client.query(
+      `SELECT XK.IDXuatKho, CT.IDVatTu, VT.TenVatTu, CT.SoLuong, CT.NguoiYeuCau, CT.IDNguoiDung, ND.TenDangNhap AS TenNguoiDung
+       FROM XuatKho XK
+       JOIN ChiTietXuatKho CT ON XK.IDXuatKho = CT.IDXuatKho
+       JOIN VatTu VT ON CT.IDVatTu = VT.IDVatTu
+       JOIN NguoiDung ND ON CT.IDNguoiDung = ND.IDNguoiDung
+       WHERE XK.IDXuatKho = $1`,
+      [IDXuatKho]
+    );
+
+    await client.query("COMMIT"); // Commit giao dịch
+
+    res.status(201).json({
+      success: true,
+      message: "Xuất kho thành công.",
+      data: result.rows,
+    });
+  } catch (err) {
+    await client.query("ROLLBACK"); // Nếu lỗi thì rollback
+    console.error("Lỗi xuất kho:", err.message);
+    res.status(400).json({ success: false, message: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+
+app.get("/lichsugiaodich", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        lgd.idgiaodich,
+        lgd.idvattu,
+        vt.tenvattu,
+        lgd.idnhapkho,
+        lgd.idxuatkho,
+        lgd.idnguoidung,
+        nd.tendangnhap AS tennguoidung,
+        lgd.loaigiaodich,
+        lgd.soluong,
+        lgd.ngaygiaodich
+      FROM lichsugiaodich lgd
+      LEFT JOIN vattu vt ON lgd.idvattu = vt.idvattu
+      LEFT JOIN nguoidung nd ON lgd.idnguoidung = nd.idnguoidung
+      ORDER BY lgd.ngaygiaodich DESC
+    `);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching transaction history:", err);
+    res.status(500).json({ error: "Có lỗi xảy ra khi lấy lịch sử giao dịch." });
+  }
+});
+
+app.get("/tonkho", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        idvattu,
+        tenvattu,
+        tendanhmuc,
+        ngayhethan,
+        tongnhap,
+        tongxuat,
+        tonkhohientai
+      FROM tonkho
+    `);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching inventory data:", err);
+    res.status(500).json({ error: "Có lỗi xảy ra khi lấy dữ liệu tồn kho." });
+  }
+});
+
+app.get("/api/nhacungcap", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        idncc, 
+        tenncc, 
+        sodienthoai, 
+        email, 
+        diachi, 
+        stk, 
+        mst,
+        website
+      FROM nhacungcap
+    `);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching nhà cung cấp:", err);
+    res
+      .status(500)
+      .json({ error: "Có lỗi xảy ra khi lấy danh sách nhà cung cấp." });
+  }
+});
+
+app.get("/api/thongke-nhapxuat", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT thang, 
+             SUM(tong_nhap) AS tong_nhap, 
+             SUM(tong_xuat) AS tong_xuat
+      FROM view_thongke_nhapxuat
+      GROUP BY thang
+      ORDER BY thang;
+    `);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Lỗi khi lấy thống kê nhập xuất:", error);
+    res.status(500).json({ error: "Lỗi máy chủ" });
+  }
+});
+
+app.post("/api/nhacungcap", verifyToken, async (req, res) => {
+  const { tenncc, sodienthoai, email, diachi, stk, mst } = req.body;
+
+  if (!tenncc || !sodienthoai || !email || !diachi || !stk || !mst) {
+    return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO nhacungcap (tenncc, sodienthoai, email, diachi, stk, mst, website) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [tenncc, sodienthoai, email, diachi, stk, mst]
+    );
+    res.status(201).json({
+      success: true,
+      message: "Thêm nhà cung cấp thành công",
+      data: result.rows[0]});
+  } catch (err) {
+    console.error("Error adding nhà cung cấp:", err);
+    res.status(500).json({ 
+      message: "Có lỗi xảy ra khi thêm nhà cung cấp.", 
+      error: err.message 
+    });
+   }
+});
+
+app.delete("/api/nhacungcap/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Kiểm tra xem nhà cung cấp có tồn tại không
+    const checkResult = await pool.query(
+      "SELECT * FROM nhacungcap WHERE idncc = $1",
+      [id]
+    );
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: "Nhà cung cấp không tồn tại." });
+    }
+
+    // Xóa nhà cung cấp
+    await pool.query("DELETE FROM nhacungcap WHERE idncc = $1", [id]);
+    res.status(200).json({ message: "Xóa nhà cung cấp thành công." });
+  } catch (err) {
+    console.error("Error deleting nhà cung cấp:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi xóa nhà cung cấp." });
+  }
+});
+
+app.put("/api/nhacungcap/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { tenncc, sodienthoai, email, diachi, stk, mst } = req.body;
+  // console.log("ID nhận được từ client:", id);
+  if (!tenncc || !sodienthoai || !email || !diachi || !stk || !mst) {
+    return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
+  }
+
+  // console.log("Thông tin nhận từ client:", JSON.stringify({ id, tenncc, sodienthoai, email, diachi, stk, mst }, null, 2));
+  try {
+    // Kiểm tra xem nhà cung cấp có tồn tại không
+    const checkResult = await pool.query(
+      "SELECT * FROM nhacungcap WHERE idncc = $1",
+      [id]
+    );
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: "Nhà cung cấp không tồn tại." });
+    }
+
+    // Cập nhật thông tin nhà cung cấp
+    const result = await pool.query(
+      `UPDATE nhacungcap 
+       SET tenncc = $1, 
+           sodienthoai = $2, 
+           email = $3, 
+           diachi = $4, 
+           stk = $5, 
+           mst = $6 
+       WHERE idncc = $7 RETURNING *`,
+      [tenncc, sodienthoai, email, diachi, stk, mst, id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật nhà cung cấp thành công.",
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Error updating nhà cung cấp:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật nhà cung cấp." });
+  }
+});
+
+app.get("/api/xuatkho", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        XK.IDXuatKho,
+        XK.NgayXuat,
+        CTXK.IDVatTu,
+        VT.TenVatTu,
+        CTXK.SoLuong,
+        CTXK.NguoiYeuCau,
+        CTXK.IDNguoiDung,
+        ND.TenDangNhap AS TenNguoiDung
+      FROM XuatKho XK
+      JOIN ChiTietXuatKho CTXK ON XK.IDXuatKho = CTXK.IDXuatKho
+      JOIN VatTu VT ON CTXK.IDVatTu = VT.IDVatTu
+      JOIN NguoiDung ND ON CTXK.IDNguoiDung = ND.IDNguoiDung
+      ORDER BY XK.NgayXuat DESC
+    `);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching export data:", err);
+    res.status(500).json({ error: "Có lỗi xảy ra khi lấy dữ liệu xuất kho." });
+  }
+});
+
+// tìm nhà cung cấp theo các sản phẩm (vật tư) 
+app.get('/api/nhacungcap/vattu/:idvattu', verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        ncc.idncc,
+        ncc.TenNCC,
+        ncc.SoDienThoai,
+        ncc.Email,
+        ncc.DiaChi,
+        ncc.STK,
+        ncc.MST,
+        ncc.website,
+        vt.idvattu,
+        vt.TenVatTu
+      FROM NhaCungCap ncc
+      LEFT JOIN Vattu_NhaCungCap vtncc ON ncc.idncc = vtncc.idncc
+      LEFT JOIN Vattu vt ON vtncc.idvattu = vt.idvattu
+      WHERE vtncc.idvattu = $1
+    `, [idvattu]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Lỗi truy vấn nhà cung cấp:", error);
+    res.status(500).json({ error: 'Lỗi truy vấn nhà cung cấp', chiTiet: error.message });
+  }
+});
+
+app.get('/api/backup', verifyToken, async (req, res) => {
+  try {
+    const tables = {
+      nguoidung: await pool.query("SELECT * FROM nguoidung"),
+      nhacungcap: await pool.query("SELECT * FROM nhacungcap"),
+      xuatkho: await pool.query("SELECT * FROM xuatkho"),
+      chitietxuatkho: await pool.query("SELECT * FROM chitietxuatkho"),
+      lichsugiaodich: await pool.query("SELECT * FROM lichsugiaodich"),
+      tonkho: await pool.query("SELECT * FROM tonkho"),
+      vattu_nhacungcap: await pool.query(`
+        SELECT vattu.idvattu, vattu.tenvattu, nhacungcap.idncc, nhacungcap.tenncc
+        FROM vattu_nhacungcap
+        JOIN vattu ON vattu.idvattu = vattu_nhacungcap.idvattu
+        JOIN nhacungcap ON nhacungcap.idncc = vattu_nhacungcap.idncc
+      `), // lấy id kèm tên để dễ nhận biết hơn
+      // thongke: await pool.query("SELECT * FROM view_thongke_nhapxuat")
+    };
+
+    res.json({
+      success: true,
+      backup: {
+        nguoidung: tables.nguoidung.rows,
+        nhacungcap: tables.nhacungcap.rows,
+        xuatkho: tables.xuatkho.rows,
+        chitietxuatkho: tables.chitietxuatkho.rows,
+        lichsugiaodich: tables.lichsugiaodich.rows,
+        tonkho: tables.tonkho.rows,
+        vattu_nhacungcap: tables.vattu_nhacungcap.rows,
+        // view_thongke_nhapxuat: tables.thongke.rows,
+      }
+    });
+  } catch (err) {
+    console.error("Lỗi backup:", err);
+    res.status(500).json({ success: false, message: "Không thể sao lưu dữ liệu." });
+  }
+});
+
+// Liên kết vật tư với nhà cung cấp -> xử lý khi ở ncc
+app.post('/api/nhacungcap/:idncc/vattu', verifyToken, async (req, res) => {
+  const { idncc } = req.params;
+  const { idvattuList } = req.body; // array các idvattu
+
+  try {
+    // Xóa các liên kết cũ trước
+    await pool.query("DELETE FROM Vattu_NhaCungCap WHERE idncc = $1", [idncc]);
+
+    for (let idvattu of idvattuList) {
+      await pool.query(
+        `INSERT INTO Vattu_NhaCungCap (idncc, idvattu) VALUES ($1, $2) ON CONFLICT (idvattu, idncc) DO NOTHING`,
+        [idncc, idvattu]
+      );
+    }
+
+    res.json({ success: true, message: "Cập nhật vật tư cho nhà cung cấp thành công" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Lỗi cập nhật vật tư cho nhà cung cấp" });
+  }
+});
+
+// Lấy danh sách vật tư của một nhà cung cấp cụ thể
+app.get('/api/vattu/nhacungcap/:idncc', verifyToken, async (req, res) => {
+  const { idncc } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        vt.idvattu, 
+        vt.tenvattu 
+      FROM Vattu vt
+      JOIN Vattu_NhaCungCap vtncc ON vt.idvattu = vtncc.idvattu
+      WHERE vtncc.idncc = $1
+    `, [idncc]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Lỗi lấy vật tư theo nhà cung cấp:", err);
+    res.status(500).json({ message: "Lỗi khi lấy vật tư của nhà cung cấp." });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
