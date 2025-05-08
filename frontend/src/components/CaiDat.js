@@ -9,6 +9,7 @@ const CaiDat = () => {
     const [matkhauCu, setMatkhauCu] = useState("");
     const [matkhauMoi, setMatkhauMoi] = useState("");
     const [thongbao, setThongbao] = useState("");
+    const userRole = localStorage.getItem('userRole'); // Lấy thông tin người dùng
 
     const handleLogout = () => {
         // Xóa thông tin người dùng khỏi localStorage
@@ -19,27 +20,34 @@ const CaiDat = () => {
     };
 
     const handleBackup = async () => {
-        try {
-            const res = await fetch('http://localhost:5000/api/backup', {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`
-                }
-            }); // yêu cầu xác thực token khi thực hiện sao lưu
-            const data = await res.json();
-            if (data.success) {
-                const blob = new Blob([JSON.stringify(data.backup, null, 2)], { type: 'application/json' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'backup-toanbo-kktl.json';
-                link.click(); // click để tải 
-            } else {
-                alert("Không thể sao lưu dữ liệu.");
+    try {
+        const res = await fetch("http://localhost:5000/api/backup", {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`
             }
-        } catch (error) {
-            console.error("Lỗi khi sao lưu:", error);
-            alert("Lỗi khi sao lưu dữ liệu.");
-        }
-    };
+        });
+        if (!res.ok) throw new Error("Lỗi khi sao lưu dữ liệu.");
+
+        // hiển thị option download
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const now = new Date();
+
+        // lấy thời gian khi backup
+        // định dạng tên file theo kiểu dulieu_YYYYMMDD_HHMMSS.sql
+        const fileName = `dulieu_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}.sql`;
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Lỗi khi sao lưu:", error);
+        alert("Lỗi khi sao lưu dữ liệu.");
+    }
+};
 
     const handleChangePassword = async () => {
         try {
@@ -95,14 +103,17 @@ const CaiDat = () => {
                         </Button>
                     </Grid>
                     <Grid item>
-                        <Button 
-                            variant="outlined" 
-                            color="secondary" 
-                            onClick={handleBackup} 
-                            sx={{ width: '200px' }} // Chiều rộng nút
-                        >
-                            Sao lưu dữ liệu
-                        </Button>
+                        {/* Chỉ hiển thị khi userRole là Admin */}
+                        {userRole === "Admin" && (
+                            <Button
+                                variant="outlined"
+                                color="secondary"
+                                onClick={handleBackup}
+                                sx={{ width: '200px' }} // Chiều rộng nút
+                            >
+                                Sao lưu dữ liệu
+                            </Button>
+                        )}
                     </Grid>
                 </Grid>
 
