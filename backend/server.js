@@ -37,7 +37,7 @@ const pool = new Pool({
   host: "localhost",
   database: "QLNK",
   //password: "kyanh",
-  password: "123123",
+  password: "051203",
   port: 5432,
 });
 
@@ -496,6 +496,23 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
       LEFT JOIN nguoidung nd ON lgd.idnguoidung = nd.idnguoidung
       ORDER BY lgd.ngaygiaodich DESC
     `);
+
+     // transactions by idgiaodich
+     const groupedData = result.rows.reduce((acc, gd) => {
+      const id = gd.idgiaodich;
+      if (!acc[id]) {
+        acc[id] = {
+          idgiaodich: id,
+          inventories: [],
+          ngaygiaodich: gd.ngaygiaodich,
+        };
+      }
+      acc[id].inventories.push(gd);
+      return acc;
+    }, {});
+
+   
+    const groupedTransactions = Object.values(groupedData);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error fetching transaction history:", err);
