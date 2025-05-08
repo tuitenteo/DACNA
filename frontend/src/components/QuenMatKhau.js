@@ -5,20 +5,15 @@ import "../styles/QuenMatKhau.css";
 
 const QuenMatKhau = () => {
   const [email, setEmail] = useState("");
-  const [thongbao, setThongbao] = useState("");
   const navigate = useNavigate();
 
   const handleReset = async () => {
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/quenmatkhau",
-        {
-          email,
-        }
-      );
-      setThongbao(response.data.message);
+      await axios.post("http://localhost:5000/api/quenmatkhau", { email });
+      alert("Yêu cầu khôi phục mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn.");
     } catch (err) {
-      setThongbao(err.response?.data?.message || "Lỗi hệ thống");
+      // Hiển thị thông báo lỗi chi tiết nếu có, hoặc lỗi chung
+      alert(err.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.");
     }
   };
 
