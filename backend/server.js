@@ -8,6 +8,8 @@ const verifyToken = require("./middleware/auth");
 const multer = require("multer");
 const path = require("path");
 const nodemailer = require("nodemailer");
+const { exec } = require("child_process");
+const fs = require("fs");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -726,40 +728,26 @@ app.get('/api/nhacungcap/vattu/:idvattu', verifyToken, async (req, res) => {
 });
 
 app.get('/api/backup', verifyToken, async (req, res) => {
-  try {
-    const tables = {
-      nguoidung: await pool.query("SELECT * FROM nguoidung"),
-      nhacungcap: await pool.query("SELECT * FROM nhacungcap"),
-      xuatkho: await pool.query("SELECT * FROM xuatkho"),
-      chitietxuatkho: await pool.query("SELECT * FROM chitietxuatkho"),
-      lichsugiaodich: await pool.query("SELECT * FROM lichsugiaodich"),
-      tonkho: await pool.query("SELECT * FROM tonkho"),
-      vattu_nhacungcap: await pool.query(`
-        SELECT vattu.idvattu, vattu.tenvattu, nhacungcap.idncc, nhacungcap.tenncc
-        FROM vattu_nhacungcap
-        JOIN vattu ON vattu.idvattu = vattu_nhacungcap.idvattu
-        JOIN nhacungcap ON nhacungcap.idncc = vattu_nhacungcap.idncc
-      `), // lấy id kèm tên để dễ nhận biết hơn
-      // thongke: await pool.query("SELECT * FROM view_thongke_nhapxuat")
-    };
+  const fileName = `backup_${Date.now()}.sql`; // tạo tên file backup với timestamp
+  const filePath = path.join(__dirname, fileName); // đường dẫn lưu file tạm thời trên server
 
-    res.json({
-      success: true,
-      backup: {
-        nguoidung: tables.nguoidung.rows,
-        nhacungcap: tables.nhacungcap.rows,
-        xuatkho: tables.xuatkho.rows,
-        chitietxuatkho: tables.chitietxuatkho.rows,
-        lichsugiaodich: tables.lichsugiaodich.rows,
-        tonkho: tables.tonkho.rows,
-        vattu_nhacungcap: tables.vattu_nhacungcap.rows,
-        // view_thongke_nhapxuat: tables.thongke.rows,
-      }
+  // Lệnh pg_dump (gọi vô cmd)
+  const dumpCommand = `pg_dump -U postgres -d QLNK -F c -f "${filePath}"`;
+
+  // pass postgre, nhớ tự chỉnh lại pass của bản thân
+  const env = { ...process.env, PGPASSWORD: "123123" };
+
+  exec(dumpCommand, { env }, (error, stdout, stderr) => {
+    if (error) {
+      console.error("Lỗi backup:", error);
+      return res.status(500).json({ success: false, message: "Không thể backup database." });
+    }
+    // Gửi file về client
+    res.download(filePath, fileName, (err) => {
+      // Xóa file sau khi gửi xong
+      fs.unlink(filePath, () => {});
     });
-  } catch (err) {
-    console.error("Lỗi backup:", err);
-    res.status(500).json({ success: false, message: "Không thể sao lưu dữ liệu." });
-  }
+  });
 });
 
 // Liên kết vật tư với nhà cung cấp -> xử lý khi ở ncc
