@@ -38,6 +38,7 @@ import NhaCungCap from "./NhaCungCap";
 import ThongKeGiaoDich from "./ThongKeGiaoDich";
 import NhapKho from "./NhapKho";
 import BaoGia from "./BaoGia";
+import SoSanhBaoGia from "./SoSanhBaoGia";
 import LoHang from "./LoHang";
 import ThemLoHang from "./ThemLoHang";
 import logo from "../assets/myicon.png";
@@ -339,6 +340,7 @@ const BangDieuHuong = () => {
               <Route path="thongkegiaodich" element={<ThongKeGiaoDich />} />
               <Route path="nhacungcap" element={<NhaCungCap />} />
               <Route path="baogia" element={<BaoGia />} />
+              <Route path="so-sanh-bao-gia" element={<SoSanhBaoGia />} />
               <Route path="lohang" element={<LoHang />} />
               <Route path="them-lo-hang" element={<ThemLoHang />} />
             </Routes>
