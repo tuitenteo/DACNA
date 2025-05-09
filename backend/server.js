@@ -960,39 +960,64 @@ app.post("/api/lohang/upload", verifyToken, upload.single("file"), async (req, r
 app.delete("/api/lohang/:id", verifyToken, async (req, res) => {
     const { id } = req.params;
 
+    const client = await pool.connect();
     try {
-        const client = await pool.connect();
-        try {
-            await client.query("BEGIN"); // Bắt đầu transaction
+        await client.query("BEGIN"); // Bắt đầu transaction
 
-            // Xóa chi tiết lô hàng
+        // Lấy danh sách idnhapkho liên quan đến lô hàng
+        const nhapKhoResult = await client.query(
+            `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
+            [id]
+        );
+
+        const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
+
+        // Xóa dữ liệu trong bảng lichsugiaodich
+        if (idNhapKhoList.length > 0) {
             await client.query(
-                `DELETE FROM chitietlohang WHERE idlohang = $1`,
-                [id]
+                `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
+                [idNhapKhoList]
             );
-
-            // Xóa lô hàng
-            const result = await client.query(
-                `DELETE FROM lohang WHERE idlohang = $1 RETURNING *`,
-                [id]
-            );
-
-            if (result.rowCount === 0) {
-                throw new Error("Lô hàng không tồn tại.");
-            }
-
-            await client.query("COMMIT"); // Commit transaction
-            res.status(200).json({ message: "Xóa lô hàng thành công." });
-        } catch (err) {
-            await client.query("ROLLBACK"); // Rollback nếu có lỗi
-            console.error("Lỗi khi xóa lô hàng:", err);
-            res.status(500).json({ message: "Có lỗi xảy ra khi xóa lô hàng." });
-        } finally {
-            client.release();
         }
+
+        // Xóa dữ liệu trong bảng chitietnhapkho
+        await client.query(
+            `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
+            [id]
+        );
+
+        // Xóa dữ liệu trong bảng nhapkho
+        if (idNhapKhoList.length > 0) {
+            await client.query(
+                `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
+                [idNhapKhoList]
+            );
+        }
+
+        // Xóa dữ liệu trong bảng chitietlohang
+        await client.query(
+            `DELETE FROM chitietlohang WHERE idlohang = $1`,
+            [id]
+        );
+
+        // Xóa dữ liệu trong bảng lohang
+        const result = await client.query(
+            `DELETE FROM lohang WHERE idlohang = $1 RETURNING *`,
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            throw new Error("Lô hàng không tồn tại.");
+        }
+
+        await client.query("COMMIT"); // Commit transaction
+        res.status(200).json({ message: "Xóa lô hàng và dữ liệu liên quan thành công." });
     } catch (err) {
-        console.error("Lỗi server:", err);
-        res.status(500).json({ message: "Lỗi server." });
+        await client.query("ROLLBACK"); // Rollback nếu có lỗi
+        console.error("Lỗi khi xóa lô hàng:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi xóa lô hàng." });
+    } finally {
+        client.release();
     }
 });
 
