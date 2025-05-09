@@ -9,6 +9,7 @@ const multer = require("multer");
 const path = require("path");
 const nodemailer = require("nodemailer");
 const { exec } = require("child_process");
+const xlsx = require("xlsx");
 const fs = require("fs");
 
 const app = express();
@@ -23,7 +24,7 @@ const storage = multer.diskStorage({
     cb(null, `phieu_xuat_kho_${Date.now()}.pdf`);
   },
 });
-const upload = multer({ storage: storage });
+//const upload = multer({ storage: storage });
 
 app.use(express.json());
 app.use(cors());
@@ -875,6 +876,319 @@ app.post("/api/send-email", verifyToken, async (req, res) => {
     console.error("Lỗi gửi email:", error);
     res.status(500).json({ message: "Không thể gửi email." });
   }
+});
+
+// xem danh sách lô hàng
+app.get("/api/lohang", verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                lh.idlohang,
+                lh.tongtien,
+                lh.trangthai,
+                lh.ngaydukiennhapkho,
+                lh.ngaythuctenhapkho,
+                ncc.tenncc
+            FROM lohang lh
+            LEFT JOIN nhacungcap ncc ON lh.idncc = ncc.idncc
+            ORDER BY lh.idlohang DESC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error("Lỗi khi lấy danh sách lô hàng:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi lấy danh sách lô hàng." });
+    }
+});
+
+//xem chi tiết lô hàng 
+app.get("/api/lohang/:id/chitiet", verifyToken, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query(
+            `
+            SELECT 
+                ctlh.idvattu,
+                vt.tenvattu,
+                ctlh.soluong,
+                ctlh.dongianhap
+            FROM chitietlohang ctlh
+            JOIN vattu vt ON ctlh.idvattu = vt.idvattu
+            WHERE ctlh.idlohang = $1
+            `,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Không tìm thấy chi tiết lô hàng." });
+        }
+
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error("Lỗi khi lấy chi tiết lô hàng:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi lấy chi tiết lô hàng." });
+    }
+});
+
+// nhập lô hàng từ file excel tự động
+// Cấu hình multer để lưu file Excel tạm thời
+const upload = multer({ dest: "uploads/" });
+const excelDateToJSDate = (excelDate) => {
+    const jsDate = new Date((excelDate - 25569) * 86400 * 1000); // Chuyển đổi từ số ngày Excel sang timestamp
+    return jsDate.toISOString().split("T")[0]; // Trả về định dạng YYYY-MM-DD
+};
+
+app.post("/api/lohang/upload", verifyToken, upload.single("file"), async (req, res) => {
+    const file = req.file;
+    const userId = req.user?.id; // Lấy ID người dùng từ token
+
+    if (!file) {
+        return res.status(400).json({ message: "Vui lòng upload file Excel." });
+    }
+
+    try {
+        // Đọc file Excel
+        const workbook = xlsx.readFile(file.path);
+        const sheetName = workbook.SheetNames[0]; // Lấy sheet đầu tiên
+        const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        console.log("Dữ liệu từ file Excel:", sheetData);
+
+        // Kiểm tra dữ liệu trong file Excel
+        if (!sheetData || sheetData.length === 0) {
+            return res.status(400).json({ message: "File Excel không có dữ liệu." });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query("BEGIN"); // Bắt đầu transaction
+
+            // Thêm lô hàng
+            const { idncc, tongtien, trangthai } = sheetData[0];
+            const ngaydukiennhapkho = excelDateToJSDate(sheetData[0].ngaydukiennhapkho);
+            const ngaythuctenhapkho = excelDateToJSDate(sheetData[0].ngaythuctenhapkho);
+
+            const loHangResult = await client.query(
+                `INSERT INTO lohang (idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho)
+                 VALUES ($1, $2, $3, $4, $5) RETURNING idlohang`,
+                [idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho]
+            );
+            const idlohang = loHangResult.rows[0].idlohang;
+
+            // Lọc dữ liệu chi tiết lô hàng
+            const chiTietLoHang = sheetData.filter(row => row.idvattu && row.soluong && row.dongianhap);
+
+            // Kiểm tra nếu không có chi tiết lô hàng
+            if (chiTietLoHang.length === 0) {
+                throw new Error("Không có chi tiết lô hàng hợp lệ trong file Excel.");
+            }
+
+            // Thêm chi tiết lô hàng
+            for (let i = 0; i < chiTietLoHang.length; i++) {
+                const { idvattu, soluong, dongianhap } = chiTietLoHang[i];
+                await client.query(
+                    `INSERT INTO chitietlohang (idlohang, idvattu, soluong, dongianhap)
+                     VALUES ($1, $2, $3, $4)`,
+                    [idlohang, idvattu, soluong, dongianhap]
+                );
+            }
+
+            // Thêm vào bảng nhapkho
+            const nhapKhoResult = await client.query(
+                `INSERT INTO nhapkho (ngaynhap) VALUES (CURRENT_DATE) RETURNING idnhapkho`
+            );
+            const idnhapkho = nhapKhoResult.rows[0].idnhapkho;
+
+            // Thêm chi tiết nhập kho
+            for (let i = 0; i < chiTietLoHang.length; i++) {
+                const { idvattu, soluong } = chiTietLoHang[i];
+                await client.query(
+                    `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [idnhapkho, idlohang, idvattu, userId, soluong]
+                );
+            }
+
+            await client.query("COMMIT"); // Commit transaction
+            res.status(201).json({ message: "Thêm lô hàng và nhập kho thành công.", idlohang, idnhapkho });
+        } catch (err) {
+            await client.query("ROLLBACK"); // Rollback nếu có lỗi
+            console.error("Lỗi khi thêm lô hàng và nhập kho:", err);
+            res.status(500).json({ message: "Có lỗi xảy ra khi thêm lô hàng và nhập kho." });
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error("Lỗi khi xử lý file Excel:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi xử lý file Excel." });
+    }
+});
+
+// Xóa lô hàng và chi tiết lô hàng
+app.delete("/api/lohang/:id", verifyToken, async (req, res) => {
+    const { id } = req.params;
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN"); // Bắt đầu transaction
+
+        // Lấy danh sách idnhapkho liên quan đến lô hàng
+        const nhapKhoResult = await client.query(
+            `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
+            [id]
+        );
+
+        const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
+
+        // Xóa dữ liệu trong bảng lichsugiaodich
+        if (idNhapKhoList.length > 0) {
+            await client.query(
+                `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
+                [idNhapKhoList]
+            );
+        }
+
+        // Xóa dữ liệu trong bảng chitietnhapkho
+        await client.query(
+            `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
+            [id]
+        );
+
+        // Xóa dữ liệu trong bảng nhapkho
+        if (idNhapKhoList.length > 0) {
+            await client.query(
+                `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
+                [idNhapKhoList]
+            );
+        }
+
+        // Xóa dữ liệu trong bảng chitietlohang
+        await client.query(
+            `DELETE FROM chitietlohang WHERE idlohang = $1`,
+            [id]
+        );
+
+        // Xóa dữ liệu trong bảng lohang
+        const result = await client.query(
+            `DELETE FROM lohang WHERE idlohang = $1 RETURNING *`,
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            throw new Error("Lô hàng không tồn tại.");
+        }
+
+        await client.query("COMMIT"); // Commit transaction
+        res.status(200).json({ message: "Xóa lô hàng và dữ liệu liên quan thành công." });
+    } catch (err) {
+        await client.query("ROLLBACK"); // Rollback nếu có lỗi
+        console.error("Lỗi khi xóa lô hàng:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi xóa lô hàng." });
+    } finally {
+        client.release();
+    }
+});
+
+// Cập nhật trạng thái lô hàng
+app.put("/api/lohang/:id/trangthai", verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { trangthai } = req.body;
+
+    // Kiểm tra trạng thái hợp lệ
+    const validStatuses = ["Đã nhập", "Đã Hủy"];
+    if (!validStatuses.includes(trangthai)) {
+        return res.status(400).json({ message: "Trạng thái không hợp lệ." });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN"); // Bắt đầu transaction
+
+        // Lấy trạng thái hiện tại của lô hàng
+        const currentStatusResult = await client.query(
+            `SELECT trangthai FROM lohang WHERE idlohang = $1`,
+            [id]
+        );
+
+        if (currentStatusResult.rows.length === 0) {
+            throw new Error("Lô hàng không tồn tại.");
+        }
+
+        const currentStatus = currentStatusResult.rows[0].trangthai;
+
+        // Nếu trạng thái không thay đổi, không làm gì cả
+        if (currentStatus === trangthai) {
+            return res.status(200).json({ message: "Trạng thái không thay đổi." });
+        }
+
+        // Cập nhật trạng thái lô hàng
+        const result = await client.query(
+            `UPDATE lohang SET trangthai = $1 WHERE idlohang = $2 RETURNING *`,
+            [trangthai, id]
+        );
+
+        // Nếu trạng thái là "Đã Hủy", xóa dữ liệu liên quan
+        if (trangthai === "Đã Hủy") {
+            const nhapKhoResult = await client.query(
+                `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
+                [id]
+            );
+
+            const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
+
+            if (idNhapKhoList.length > 0) {
+                await client.query(
+                    `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
+                    [idNhapKhoList]
+                );
+            }
+
+            await client.query(
+                `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
+                [id]
+            );
+
+            if (idNhapKhoList.length > 0) {
+                await client.query(
+                    `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
+                    [idNhapKhoList]
+                );
+            }
+        }
+
+        // Nếu trạng thái là "Đã nhập", thêm lại dữ liệu vào bảng nhapkho và chitietnhapkho
+        if (trangthai === "Đã nhập") {
+            // Chỉ thêm nếu trạng thái trước đó không phải là "Đã nhập"
+            if (currentStatus !== "Đã nhập") {
+                const nhapKhoResult = await client.query(
+                    `INSERT INTO nhapkho (ngaynhap) VALUES (CURRENT_DATE) RETURNING idnhapkho`
+                );
+                const idnhapkho = nhapKhoResult.rows[0].idnhapkho;
+
+                const chiTietLoHang = await client.query(
+                    `SELECT idvattu, soluong FROM chitietlohang WHERE idlohang = $1`,
+                    [id]
+                );
+
+                for (let i = 0; i < chiTietLoHang.rows.length; i++) {
+                    const { idvattu, soluong } = chiTietLoHang.rows[i];
+                    await client.query(
+                        `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [idnhapkho, id, idvattu, req.user?.id, soluong]
+                    );
+                }
+            }
+        }
+
+        await client.query("COMMIT"); // Commit transaction
+        res.status(200).json({ message: "Cập nhật trạng thái thành công.", lohang: result.rows[0] });
+    } catch (err) {
+        await client.query("ROLLBACK"); // Rollback nếu có lỗi
+        console.error("Lỗi khi cập nhật trạng thái lô hàng:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật trạng thái lô hàng." });
+    } finally {
+        client.release();
+    }
 });
 
 app.listen(port, () => {
