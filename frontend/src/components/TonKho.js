@@ -11,6 +11,11 @@ import {
   TableContainer,
   Paper,
   TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import { formatDateToDDMMYYYY } from "../utils/utils";
 
@@ -23,6 +28,9 @@ const TonKho = () => {
   const [view, setView] = useState("all"); // Quản lý chế độ hiển thị
   const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng hiển thị
   const [currentPage, setCurrentPage] = useState(1); // Trang hiện tại
+  const [openModal, setOpenModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [detailList, setDetailList] = useState([]);
 
   useEffect(() => {
     const fetchTonKho = async () => {
@@ -61,7 +69,7 @@ const TonKho = () => {
     const expiryDate = new Date(ngayHetHan);
     return expiryDate < today;
   };
-  
+
   if (loading) {
     return <p>Đang tải dữ liệu...</p>;
   }
@@ -109,7 +117,7 @@ const TonKho = () => {
         Number(item.tonkhohientai) >= 30 && // Tồn kho >= 30
         !getExpired(item.ngayhethan) && // Không hết hạn
         !getExpiringSoon(item.ngayhethan) // Không sắp hết hạn
-  ); // Tồn kho ổn định
+      ); // Tồn kho ổn định
     }
     if (view === "hetVatTu") {
       return sortedTonKhoData.filter(
@@ -138,6 +146,23 @@ const TonKho = () => {
       return "ton-kho-it"; // Tồn kho ít nhưng > 0
     return "ton-kho-du"; // Tồn kho đủ/ổn định: Màu xanh lá
   };
+
+  const handleOpenDetail = async (type, idvattu) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`http://localhost:5000/api/tonkho/${idvattu}/${type}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setModalTitle(type === "nhap" ? "Chi tiết tổng nhập" : "Chi tiết tổng xuất");
+    setDetailList(response.data);
+    setOpenModal(true);
+  } catch (err) {
+    console.error("Lỗi lấy chi tiết:", err);
+    alert("Không thể tải chi tiết " + type);
+  }
+};
+
   return (
     <div>
       <h1>Tồn Kho</h1>
@@ -246,8 +271,24 @@ const TonKho = () => {
                 <TableCell>{item.tenvattu}</TableCell>
                 <TableCell>{item.tendanhmuc || "Không xác định"}</TableCell>
                 <TableCell>{formatDateToDDMMYYYY(item.ngayhethan)}</TableCell>
-                <TableCell>{item.tongnhap}</TableCell>
-                <TableCell>{item.tongxuat}</TableCell>
+                <TableCell>
+  {item.tongnhap}{" "}
+  <span
+    style={{ color: "blue", cursor: "pointer", textDecoration: "underline" }}
+    onClick={() => handleOpenDetail("nhap", item.idvattu)}
+  >
+    chi tiết
+  </span>
+</TableCell>
+               <TableCell>
+  {item.tongxuat}{" "}
+  <span
+    style={{ color: "blue", cursor: "pointer", textDecoration: "underline" }}
+    onClick={() => handleOpenDetail("xuat", item.idvattu)}
+  >
+    chi tiết
+  </span>
+</TableCell>
                 <TableCell>{item.tonkhohientai}</TableCell>
                 <TableCell>{item.tonkhothucte || "Không xác định"}</TableCell>
               </TableRow>
@@ -255,6 +296,25 @@ const TonKho = () => {
           </TableBody>
         </Table>
       </TableContainer>
+{/* hiển thị modal chi tiết */}
+      <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
+  <DialogTitle>{modalTitle}</DialogTitle>
+  <DialogContent dividers>
+    {detailList.length > 0 ? (
+      detailList.map((item, index) => (
+        <p key={index}>
+          {formatDateToDDMMYYYY(item.ngayxuat || item.ngaynhap)}: {item.soluong}
+        </p>
+      ))
+    ) : (
+      <p>Không có dữ liệu chi tiết.</p>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setOpenModal(false)}>Đóng</Button>
+  </DialogActions>
+</Dialog>
+
 
       {/* Phân trang */}
       <TablePagination

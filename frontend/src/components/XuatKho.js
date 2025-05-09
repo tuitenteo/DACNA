@@ -8,9 +8,10 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 const XuatKho = () => {
   const [NguoiYeuCau, setNguoiYeuCau] = useState("");
   const [IDNguoiDung, setIDNguoiDung] = useState("");
+  const [PhoneNguoiYeuCau, setPhoneNguoiYeuCau] = useState("");
   const [TenNguoiDung, setTenNguoiDung] = useState("");
   const [vatTuGroups, setVatTuGroups] = useState([
-    { IDVatTu: "", TenVatTu: "", SoLuong: "" }, // Nhóm mặc định
+    { IDVatTu: "", TenVatTu: "", SoLuong: "", TonKho: null, DonGia: null }, // Nhóm mặc định
   ]);
   const [vatTuList, setVatTuList] = useState([]);
   const [nguoiDungList, setNguoiDungList] = useState([]);
@@ -18,6 +19,7 @@ const XuatKho = () => {
   const [error, setError] = useState("");
   const [phieuXuatKho, setPhieuXuatKho] = useState(null);
   const [open, setOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,14 +54,15 @@ const XuatKho = () => {
       const selectedVatTu = vatTuList.find(
         (vt) => vt.idvattu === parseInt(value)
       );
-      updatedGroups[index].TenVatTu = selectedVatTu
-        ? selectedVatTu.tenvattu
-        : "";
+
+      updatedGroups[index].TenVatTu = selectedVatTu ? selectedVatTu.tenvattu : "";
     }
 
     if (field === "TenVatTu") {
       const selectedVatTu = vatTuList.find((vt) => vt.tenvattu === value);
       updatedGroups[index].IDVatTu = selectedVatTu ? selectedVatTu.idvattu : "";
+      updatedGroups[index].TonKho = Number(selectedVatTu ? selectedVatTu.tonkhohientai : "");
+      updatedGroups[index].DonGia = Number(selectedVatTu?.dongia || 0);
     }
 
     setVatTuGroups(updatedGroups);
@@ -89,12 +92,12 @@ const XuatKho = () => {
       );
       setTenNguoiDung(selectedNguoiDung ? selectedNguoiDung.tendangnhap : "");
     }
-
     if (field === "TenNguoiDung") {
       setTenNguoiDung(value);
       const selectedNguoiDung = nguoiDungList.find(
         (nd) => nd.tendangnhap === value
       );
+      // setPhoneNguoiYeuCau(selectedNguoiDung ? selectedNguoiDung.sodienthoai : "");
       setIDNguoiDung(selectedNguoiDung ? selectedNguoiDung.idnguoidung : "");
     }
   };
@@ -114,8 +117,10 @@ const XuatKho = () => {
           SoLuong: parseInt(group.SoLuong, 10), // Chuyển đổi sang số
         })),
         NguoiYeuCau,
-        IDNguoiDung: parseInt(IDNguoiDung, 10), // Chuyển đổi sang số
+        PhoneNguoiYeuCau: PhoneNguoiYeuCau || null,
+        IDNguoiDung: parseInt(IDNguoiDung, 10),
       };
+
 
       console.log("Dữ liệu gửi đi:", JSON.stringify(data, null, 2)); // Log dữ liệu gửi đi
 
@@ -130,6 +135,7 @@ const XuatKho = () => {
         setPhieuXuatKho(response.data.data);
         setVatTuGroups([{ IDVatTu: "", TenVatTu: "", SoLuong: "" }]);
         setNguoiYeuCau("");
+        setPhoneNguoiYeuCau("");
         setIDNguoiDung("");
         setTenNguoiDung("");
       }
@@ -156,37 +162,46 @@ const XuatKho = () => {
         <AddCircleOutlineIcon style={{ marginRight: "5px" }} />
         Thêm xuất kho
       </Button>
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        fullWidth 
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        fullWidth
         maxWidth="md"
-        >
+      >
         <DialogTitle>Thêm Xuất Kho</DialogTitle>
         <DialogContent>
           <form onSubmit={handleSubmit}>
-            {/* Người yêu cầu */}
-            <div>
-              <label>Người Yêu Cầu:</label>
+            {/* người yêu cầu */}
+            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+              <label style={{ marginBottom: "5px" }}>Người Yêu Cầu:</label>
               <input
                 type="text"
                 value={NguoiYeuCau}
                 onChange={(e) => setNguoiYeuCau(e.target.value)}
                 required
+                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
               />
             </div>
-
+            {/* phone người yêu cầu */}
+            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+              <label style={{ marginBottom: "5px" }}>Số Điện Thoại Người Yêu Cầu:</label>
+              <input
+                type="tel"
+                value={PhoneNguoiYeuCau}
+                onChange={(e) => setPhoneNguoiYeuCau(e.target.value)}
+                required
+                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
+              />
+            </div>
             {/* ID Người Dùng */}
-            <div>
-              <label>ID Người Dùng:</label>
+            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+              <label style={{ marginBottom: "5px" }}>ID Người Dùng:</label>
               <select
                 value={IDNguoiDung}
-                onChange={(e) =>
-                  handleNguoiDungChange("IDNguoiDung", e.target.value)
-                }
-                required
+                disabled
+                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
               >
-                <option value="">Chọn ID Người Dùng</option>
+                <option value="">ID Người Dùng Tự Động</option>
                 {nguoiDungList.map((nd) => (
                   <option key={nd.idnguoidung} value={nd.idnguoidung}>
                     {nd.idnguoidung}
@@ -196,14 +211,13 @@ const XuatKho = () => {
             </div>
 
             {/* Tên Người Dùng */}
-            <div>
-              <label>Tên Người Dùng:</label>
+            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+              <label style={{ marginBottom: "5px" }}>Tên Người Dùng:</label>
               <select
                 value={TenNguoiDung}
-                onChange={(e) =>
-                  handleNguoiDungChange("TenNguoiDung", e.target.value)
-                }
+                onChange={(e) => handleNguoiDungChange("TenNguoiDung", e.target.value)}
                 required
+                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
               >
                 <option value="">Chọn Tên Người Dùng</option>
                 {nguoiDungList.map((nd) => (
@@ -216,24 +230,16 @@ const XuatKho = () => {
 
             {/* Nhóm Vật Tư */}
             {vatTuGroups.map((group, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: "10px",
-                }}
-              >
-                <div style={{ marginRight: "10px" }}>
-                  <label>ID Vật Tư:</label>
+              <div key={index} style={{ marginBottom: "20px" }}>
+                {/* ID Vật Tư */}
+                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+                  <label style={{ marginBottom: "5px" }}>ID Vật Tư:</label>
                   <select
                     value={group.IDVatTu}
-                    onChange={(e) =>
-                      handleVatTuChange(index, "IDVatTu", e.target.value)
-                    }
-                    required
+                    disabled
+                    style={{ padding: "5px", width: "50%", marginRight: "10px" }}
                   >
-                    <option value="">Chọn ID Vật Tư</option>
+                    <option value=""> ID Vật Tư Tự Động</option>
                     {vatTuList.map((vt) => (
                       <option key={vt.idvattu} value={vt.idvattu}>
                         {vt.idvattu}
@@ -241,14 +247,15 @@ const XuatKho = () => {
                     ))}
                   </select>
                 </div>
-                <div style={{ marginRight: "10px" }}>
-                  <label>Tên Vật Tư:</label>
+
+                {/* Tên Vật Tư */}
+                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+                  <label style={{ marginBottom: "5px" }}>Tên Vật Tư:</label>
                   <select
                     value={group.TenVatTu}
-                    onChange={(e) =>
-                      handleVatTuChange(index, "TenVatTu", e.target.value)
-                    }
+                    onChange={(e) => handleVatTuChange(index, "TenVatTu", e.target.value)}
                     required
+                    style={{ padding: "5px", width: "50%", marginRight: "10px" }}
                   >
                     <option value="">Chọn Tên Vật Tư</option>
                     {vatTuList.map((vt) => (
@@ -258,25 +265,54 @@ const XuatKho = () => {
                     ))}
                   </select>
                 </div>
-                <div style={{ marginRight: "10px" }}>
-                  <label>Số Lượng:</label>
+                {/* Đơn giá */}
+                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+                  <label style={{ marginBottom: "5px" }}>Đơn Giá:</label>
                   <input
-                    type="number"
-                    value={group.SoLuong}
-                    onChange={(e) =>
-                      handleVatTuChange(index, "SoLuong", e.target.value)
-                    }
-                    required
+                    type="text"
+                    value={group.DonGia || "chưa có"}
+                    disabled
+                    style={{ padding: "5px", width: "50%", marginRight: "10px" }}
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveVatTuGroup(index)}
-                >
-                  Xóa
-                </button>
+
+                {/* Số Lượng */}
+                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
+                  <label style={{ marginBottom: "5px" }}>Số Lượng:</label>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <input
+                      type="number"
+                      value={group.SoLuong}
+                      onChange={(e) => handleVatTuChange(index, "SoLuong", e.target.value)}
+                      required
+                      style={{ padding: "5px", width: "80px", marginRight: "10px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVatTuGroup(index)}
+                      style={{ marginLeft: "10px" }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                  {/* Dòng thông tin phụ */}
+                  <div style={{ fontSize: "12px", color: "gray", marginTop: "5px" }}>
+                    {group.IDVatTu && group.TonKho !== null && (
+                      <span style={{ fontWeight: "bold" }}>
+                        Tồn kho: {group.TonKho}
+                        {group.TonKho != null &&
+                          Number(group.SoLuong) > Number(group.TonKho) && (
+                            <span style={{ color: "red", marginLeft: "8px" }}>
+                              * Vượt quá tồn kho
+                            </span>
+                          )}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
+
             <button type="button" onClick={handleAddVatTuGroup}>
               Thêm Vật Tư
             </button>
