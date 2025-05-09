@@ -69,7 +69,7 @@ const DangNhap = () => {
              color="primary" 
              className="login-button" 
              >
-              Đăng nhập 
+              {loading ? "Đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
           <div className="error-message">

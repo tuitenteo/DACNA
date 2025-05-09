@@ -5,13 +5,6 @@ import { IconButton, Button, TextField, Modal, Box } from "@mui/material";
 import { Edit, Delete, Lock, LockOpen, SortByAlpha } from "@mui/icons-material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import {
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-} from "@mui/material"; // Import thêm các thành phần cần thiết
-import {
   Table,
   TableHead,
   TableRow,
@@ -33,8 +26,9 @@ const NguoiDung = () => {
   const [formData, setFormData] = useState({
     tendangnhap: "",
     matkhau: "",
-    vaitro: "",
+    vaitro: "QuanLy",
     trangthai: "active",
+    email: "",
   });
 
   const navigate = useNavigate();
@@ -99,8 +93,9 @@ const NguoiDung = () => {
       user || {
         tendangnhap: "",
         matkhau: "",
-        vaitro: "",
+        vaitro: "QuanLy",
         trangthai: "active",
+        email: "",
       }
     );
     setShowModal(true);
@@ -140,8 +135,17 @@ const NguoiDung = () => {
       fetchNguoiDung();
       handleCloseModal();
     } catch (error) {
-      console.error("Error saving user:", error);
-      alert("Có lỗi xảy ra khi lưu người dùng.");
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        // Hiển thị thông báo lỗi cụ thể từ server
+        alert(error.response.data.message);
+      } else {
+        // Hiển thị lỗi chung nếu không có thông báo cụ thể
+        alert("Có lỗi xảy ra khi lưu người dùng.");
+      }
     }
   };
 
@@ -229,76 +233,79 @@ const NguoiDung = () => {
           <AddCircleOutlineIcon style={{ marginRight: "5px" }} />
           Thêm người dùng
         </Button>
-      
       </div>
-     {/* Bảng danh sách người dùng */}
-    <TableContainer component={Paper} style={{ marginTop: "20px" }}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Tên đăng nhập</TableCell>
-            <TableCell>Email</TableCell>
-            <TableCell>Vai trò</TableCell>
-            <TableCell>Trạng thái</TableCell>
-            <TableCell>Hành động</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {paginatedNguoiDung.map((user) => (
-            <TableRow key={user.idnguoidung}>
-              <TableCell>{user.idnguoidung}</TableCell>
-              <TableCell>{user.tendangnhap}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>{user.vaitro}</TableCell>
-              <TableCell>
-                {user.trangthai === "locked" ? "Đã khóa" : "Hoạt động"}
-              </TableCell>
-              <TableCell>
-                <IconButton
-                  color="primary"
-                  onClick={() => handleOpenModal(user)}
-                >
-                  <Edit />
-                </IconButton>
-                {user.vaitro !== "Admin" && (
-                  <>
-                    <IconButton
-                      color="secondary"
-                      onClick={() => handleDelete(user.idnguoidung)}
-                    >
-                      <Delete />
-                    </IconButton>
-                    <IconButton
-                      color={user.trangthai === "locked" ? "success" : "error"}
-                      onClick={() =>
-                        handleToggleLock(user.idnguoidung, user.trangthai)
-                      }
-                    >
-                      {user.trangthai === "locked" ? <LockOpen /> : <Lock />}
-                    </IconButton>
-                  </>
-                )}
-              </TableCell>
+      {/* Bảng danh sách người dùng */}
+      <TableContainer component={Paper} style={{ marginTop: "20px" }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Tên đăng nhập</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Vai trò</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell>Hành động</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-    
-     {/* Phân trang */}
-     <TablePagination
-      component="div"
-      count={sortedNguoiDung.length}
-      page={currentPage - 1}
-      onPageChange={(e, newPage) => setCurrentPage(newPage + 1)}
-      rowsPerPage={rowsPerPage}
-      onRowsPerPageChange={(e) => setRowsPerPage(Number(e.target.value))}
-      labelRowsPerPage="Số dòng"
-      labelDisplayedRows={({ from, to, count }) =>
-        `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
-      }
-    />
+          </TableHead>
+          <TableBody>
+            {paginatedNguoiDung.map((user) => (
+              <TableRow key={user.idnguoidung}>
+                <TableCell>{user.idnguoidung}</TableCell>
+                <TableCell>{user.tendangnhap}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  {user.vaitro === "QuanLy" ? "Quản Lý" : user.vaitro}
+                </TableCell>{" "}
+                <TableCell>
+                  {user.trangthai === "locked" ? "Đã khóa" : "Hoạt động"}
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleOpenModal(user)}
+                  >
+                    <Edit />
+                  </IconButton>
+                  {user.vaitro !== "Admin" && (
+                    <>
+                      <IconButton
+                        color="secondary"
+                        onClick={() => handleDelete(user.idnguoidung)}
+                      >
+                        <Delete />
+                      </IconButton>
+                      <IconButton
+                        color={
+                          user.trangthai === "locked" ? "success" : "error"
+                        }
+                        onClick={() =>
+                          handleToggleLock(user.idnguoidung, user.trangthai)
+                        }
+                      >
+                        {user.trangthai === "locked" ? <LockOpen /> : <Lock />}
+                      </IconButton>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Phân trang */}
+      <TablePagination
+        component="div"
+        count={sortedNguoiDung.length}
+        page={currentPage - 1}
+        onPageChange={(e, newPage) => setCurrentPage(newPage + 1)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => setRowsPerPage(Number(e.target.value))}
+        labelRowsPerPage="Số dòng"
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
+        }
+      />
 
       {/* Modal thêm/chỉnh sửa người dùng */}
       <Modal open={showModal} onClose={handleCloseModal}>
@@ -338,21 +345,18 @@ const NguoiDung = () => {
             }
             required
           />
-          <FormControl fullWidth margin="normal" required>
-            <InputLabel id="vaitro-label">Vai trò</InputLabel>
-            <Select
-              labelId="vaitro-label"
-              name="vaitro"
-              value={formData.vaitro}
-              onChange={(e) =>
-                setFormData({ ...formData, vaitro: e.target.value })
-              }
-              input={<OutlinedInput label="Vai trò" />}
-            >
-              <MenuItem value="QuanLy">Quản Lý</MenuItem>
-              <MenuItem value="Admin">Admin</MenuItem>
-            </Select>
-          </FormControl>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Vai trò"
+            name="vaitro"
+            value={formData.vaitro === "QuanLy" ? "Quản lý" : formData.vaitro} // Hiển thị "Quản lý"
+            onChange={(e) => {
+              const value =
+                e.target.value === "Quản lý" ? "QuanLy" : e.target.value; // Chuyển đổi ngược lại
+              setFormData({ ...formData, vaitro: value });
+            }}
+          />
           <TextField
             fullWidth
             margin="normal"
@@ -365,7 +369,7 @@ const NguoiDung = () => {
             required
           />
           <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
-          <Button variant="outlined" onClick={handleCloseModal}>
+            <Button variant="outlined" onClick={handleCloseModal}>
               Hủy
             </Button>
             <Button variant="contained" onClick={handleSave}>
