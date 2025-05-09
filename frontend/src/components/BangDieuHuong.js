@@ -42,6 +42,7 @@ import NhapKho from "./NhapKho";
 import ThongBaoTonKho from "./ThongBaoTonKho";
 =======
 import BaoGia from "./BaoGia";
+import SoSanhBaoGia from "./SoSanhBaoGia";
 import LoHang from "./LoHang";
 import ThemLoHang from "./ThemLoHang";
 >>>>>>> upstream/main
@@ -397,6 +398,7 @@ const BangDieuHuong = () => {
               <Route path="thongbaotonkho" element={<ThongBaoTonKho/>} />
 =======
               <Route path="baogia" element={<BaoGia />} />
+              <Route path="so-sanh-bao-gia" element={<SoSanhBaoGia />} />
               <Route path="lohang" element={<LoHang />} />
               <Route path="them-lo-hang" element={<ThemLoHang />} />
 >>>>>>> upstream/main
