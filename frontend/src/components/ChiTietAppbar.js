@@ -51,15 +51,6 @@ const ChiTietAppbar = () => {
                 inventories: [],
               };
             }
-            // // Kiểm tra nếu `inventories` tồn tại và có phần tử
-            // if (Array.isArray(curr.inventories) && curr.inventories.length > 0) {
-            //   curr.inventories.forEach((item) => {
-            //     acc[key].inventories.push({
-            //       tenvattu: item.tenvattu || "Không xác định", // Lấy từ phần tử trong mảng
-            //       soluong: item.soluong || 0, // Lấy từ phần tử trong mảng
-            //     });
-            //   });
-            // }
 
             // Kiểm tra nếu `inventories` tồn tại và có phần tử
             if (Array.isArray(curr.inventories) && curr.inventories.length > 0) {
@@ -96,15 +87,15 @@ const ChiTietAppbar = () => {
           .sort((a, b) => {
             // Ưu tiên chưa đọc lên trước
             if (a.read !== b.read) return a.read - b.read;
-           // Sắp xếp theo ngày giao dịch mới nhất
-  const dateDiff = new Date(b.ngaygiaodich) - new Date(a.ngaygiaodich);
-  if (dateDiff !== 0) return dateDiff;
+            // Sắp xếp theo ngày giao dịch mới nhất
+            const dateDiff = new Date(b.ngaygiaodich) - new Date(a.ngaygiaodich);
+            if (dateDiff !== 0) return dateDiff;
 
-  // Nếu ngày giao dịch giống nhau, sắp xếp theo mã phiếu xuất hoặc nhập (giảm dần)
-  const idA = a.idxuatkho || a.idnhapkho || 0;
-  const idB = b.idxuatkho || b.idnhapkho || 0;
-  return idB - idA; // Sắp xếp giảm dần theo mã phiếu
-});
+            // Nếu ngày giao dịch giống nhau, sắp xếp theo mã phiếu xuất hoặc nhập (giảm dần)
+            const idA = a.idxuatkho || a.idnhapkho || 0;
+            const idB = b.idxuatkho || b.idnhapkho || 0;
+            return idB - idA; // Sắp xếp giảm dần theo mã phiếu
+          });
         // Cập nhật trạng thái có thông báo mới
         setNewTransactions(processedData);
 
@@ -230,7 +221,7 @@ const ChiTietAppbar = () => {
                     {new Date(giaoDich.ngaygiaodich).toLocaleDateString("vi-VN", {
                     })}
                   </Typography>
-                  {Array.isArray(giaoDich.inventories) && giaoDich.inventories.length > 0 ? (
+                  {/* {Array.isArray(giaoDich.inventories) && giaoDich.inventories.length > 0 ? (
                     giaoDich.inventories.map((acc, idx) => (
                       <Typography key={idx} variant="body2">
                         <strong>Vật tư {idx + 1}:</strong> {acc.tenvattu || "Không xác định"} - SL: {acc.soluong || 0}
@@ -240,7 +231,28 @@ const ChiTietAppbar = () => {
                     <Typography variant="body2" color="error">
                       Không có vật tư nào
                     </Typography>
-                  )}
+                  )} */}
+{Array.isArray(giaoDich.inventories) && giaoDich.inventories.length > 0 ? (
+  giaoDich.inventories.map((acc, idx) => (
+    <Typography key={idx} variant="body2">
+      {giaoDich.loaigiaodich === "Nhập kho" ? (
+        <>
+          • IDVT: {acc.idvattu} - {acc.tenvattu || "Không xác định"}
+          {" - SL: "}{acc.soluong || 0}
+          {" - ĐG: "}{acc.dongianhap || 0}
+        </>
+      ) : (
+        <>
+          • {acc.tenvattu || "Không xác định"} - SL: {acc.soluong || 0}
+        </>
+      )}
+    </Typography>
+  ))
+) : (
+  <Typography variant="body2" color="error">
+    Không có vật tư nào
+  </Typography>
+)}
 
 
                   {!giaoDich.read && (

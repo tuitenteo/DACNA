@@ -40,7 +40,7 @@ const pool = new Pool({
   host: "localhost",
   database: "QLNK",
   //password: "kyanh",
-  password: "051203",
+  password: "123123",
   port: 5432,
 });
 
@@ -393,7 +393,7 @@ app.get("/api/vattu", verifyToken, async (req, res) => {
 
 
 app.post("/xuatkho", verifyToken, async (req, res) => {
-  const { vatTuGroups, NguoiYeuCau, PhoneNguoiYeuCau, IDNguoiDung} = req.body;
+  const { vatTuGroups, NguoiYeuCau, PhoneNguoiYeuCau, IDNguoiDung } = req.body;
 
   if (!vatTuGroups?.length || !NguoiYeuCau || !IDNguoiDung) {
     return res.status(400).json({
@@ -493,6 +493,7 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
         nd.tendangnhap AS tennguoidung,
         lgd.loaigiaodich,
         lgd.soluong,
+         lgd.dongianhap, 
         lgd.ngaygiaodich
       FROM lichsugiaodich lgd
       LEFT JOIN vattu vt ON lgd.idvattu = vt.idvattu
@@ -500,31 +501,33 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
       ORDER BY lgd.ngaygiaodich DESC
     `);
 
-// trả về đã group, nhóm gd bằng reduce
-const groupedData = result.rows.reduce((acc, gd) => {
-  const id = gd.idgiaodich;
-  if (!acc[id]) {
-    const loai = gd.loaigiaodich?.toLowerCase(); // tránh null
-    acc[id] = {
-      idgiaodich: id,
-      loaigiaodich: gd.loaigiaodich,
-      idnhapkho: loai.includes('nhap') ? gd.idnhapkho : null,
-      idxuatkho: loai.includes('xuat') ? gd.idxuatkho : null,      
-      tennguoidung: gd.tennguoidung,
-      ngaygiaodich: gd.ngaygiaodich,
-      inventories: [],
-    };
-  }
-  acc[id].inventories.push({
-    tenvattu: gd.tenvattu,
-    soluong: gd.soluong,
-  });
- 
-  return acc;
-}, {});
+    // trả về đã group, nhóm gd bằng reduce
+    const groupedData = result.rows.reduce((acc, gd) => {
+      const id = gd.idgiaodich;
+      if (!acc[id]) {
+        const loai = gd.loaigiaodich?.toLowerCase(); // tránh null
+        acc[id] = {
+          idgiaodich: id,
+          loaigiaodich: gd.loaigiaodich,
+          idnhapkho: loai.includes('nhap') ? gd.idnhapkho : null,
+          idxuatkho: loai.includes('xuat') ? gd.idxuatkho : null,
+          tennguoidung: gd.tennguoidung,
+          ngaygiaodich: gd.ngaygiaodich,
+          inventories: [],
+        };
+      }
+      acc[id].inventories.push({
+        idvattu: gd.idvattu,
+        tenvattu: gd.tenvattu,
+        soluong: gd.soluong,
+        dongianhap: gd.dongianhap || null // Nếu có cột này
+      });
 
-const groupedTransactions = Object.values(groupedData);
-res.status(200).json(groupedTransactions);
+      return acc;
+    }, {});
+
+    const groupedTransactions = Object.values(groupedData);
+    res.status(200).json(groupedTransactions);
   } catch (err) {
     console.error("Error fetching transaction history:", err);
     res.status(500).json({ error: "Có lỗi xảy ra khi lấy lịch sử giao dịch." });
@@ -591,45 +594,6 @@ app.get("/api/thongke-nhapxuat", verifyToken, async (req, res) => {
   }
 });
 
-app.get("/api/tonkho/:idvattu/xuat", verifyToken, async (req, res) => {
-  const { idvattu } = req.params;
-  try {
-    const result = await pool.query(`
-      SELECT 
-        XK.NgayXuat,
-        CTXK.SoLuong
-      FROM XuatKho XK
-      JOIN ChiTietXuatKho CTXK ON XK.IDXuatKho = CTXK.IDXuatKho
-      WHERE CTXK.IDVatTu = $1
-      ORDER BY XK.NgayXuat ASC
-    `, [idvattu]);
-
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error("Error fetching export details:", err);
-    res.status(500).json({ error: "Lỗi khi lấy chi tiết xuất kho." });
-  }
-});
-
-app.get("/api/tonkho/:idvattu/nhap", verifyToken, async (req, res) => {
-  const { idvattu } = req.params;
-  try {
-    const result = await pool.query(`
-      SELECT 
-        NK.NgayNhap,
-        CTNK.SoLuong
-      FROM NhapKho NK
-      JOIN ChiTietNhapKho CTNK ON NK.IDNhapKho = CTNK.IDNhapKho
-      WHERE CTNK.IDVatTu = $1
-      ORDER BY NK.NgayNhap ASC
-    `, [idvattu]);
-
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error("Error fetching import details:", err);
-    res.status(500).json({ error: "Lỗi khi lấy chi tiết nhập kho." });
-  }
-});
 
 
 app.post("/api/nhacungcap", verifyToken, async (req, res) => {
@@ -648,14 +612,15 @@ app.post("/api/nhacungcap", verifyToken, async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Thêm nhà cung cấp thành công",
-      data: result.rows[0]});
+      data: result.rows[0]
+    });
   } catch (err) {
     console.error("Error adding nhà cung cấp:", err);
-    res.status(500).json({ 
-      message: "Có lỗi xảy ra khi thêm nhà cung cấp.", 
-      error: err.message 
+    res.status(500).json({
+      message: "Có lỗi xảy ra khi thêm nhà cung cấp.",
+      error: err.message
     });
-   }
+  }
 });
 
 app.delete("/api/nhacungcap/:id", verifyToken, async (req, res) => {
@@ -770,7 +735,7 @@ app.get('/api/nhacungcap/vattu/:idvattu', verifyToken, async (req, res) => {
       LEFT JOIN Vattu vt ON vtncc.idvattu = vt.idvattu
       WHERE vtncc.idvattu = $1
     `, [idvattu]);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error("Lỗi truy vấn nhà cung cấp:", error);
@@ -796,7 +761,7 @@ app.get('/api/backup', verifyToken, async (req, res) => {
     // Gửi file về client
     res.download(filePath, fileName, (err) => {
       // Xóa file sau khi gửi xong
-      fs.unlink(filePath, () => {});
+      fs.unlink(filePath, () => { });
     });
   });
 });
@@ -880,8 +845,8 @@ app.post("/api/send-email", verifyToken, async (req, res) => {
 
 // xem danh sách lô hàng
 app.get("/api/lohang", verifyToken, async (req, res) => {
-    try {
-        const result = await pool.query(`
+  try {
+    const result = await pool.query(`
             SELECT 
                 lh.idlohang,
                 lh.tongtien,
@@ -893,20 +858,20 @@ app.get("/api/lohang", verifyToken, async (req, res) => {
             LEFT JOIN nhacungcap ncc ON lh.idncc = ncc.idncc
             ORDER BY lh.idlohang DESC
         `);
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error("Lỗi khi lấy danh sách lô hàng:", err);
-        res.status(500).json({ message: "Có lỗi xảy ra khi lấy danh sách lô hàng." });
-    }
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Lỗi khi lấy danh sách lô hàng:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi lấy danh sách lô hàng." });
+  }
 });
 
 //xem chi tiết lô hàng 
 app.get("/api/lohang/:id/chitiet", verifyToken, async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    try {
-        const result = await pool.query(
-            `
+  try {
+    const result = await pool.query(
+      `
             SELECT 
                 ctlh.idvattu,
                 vt.tenvattu,
@@ -916,280 +881,322 @@ app.get("/api/lohang/:id/chitiet", verifyToken, async (req, res) => {
             JOIN vattu vt ON ctlh.idvattu = vt.idvattu
             WHERE ctlh.idlohang = $1
             `,
-            [id]
-        );
+      [id]
+    );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Không tìm thấy chi tiết lô hàng." });
-        }
-
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error("Lỗi khi lấy chi tiết lô hàng:", err);
-        res.status(500).json({ message: "Có lỗi xảy ra khi lấy chi tiết lô hàng." });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy chi tiết lô hàng." });
     }
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Lỗi khi lấy chi tiết lô hàng:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi lấy chi tiết lô hàng." });
+  }
 });
 
 // nhập lô hàng từ file excel tự động
 // Cấu hình multer để lưu file Excel tạm thời
 const upload = multer({ dest: "uploads/" });
 const excelDateToJSDate = (excelDate) => {
-    const jsDate = new Date((excelDate - 25569) * 86400 * 1000); // Chuyển đổi từ số ngày Excel sang timestamp
-    return jsDate.toISOString().split("T")[0]; // Trả về định dạng YYYY-MM-DD
+  const jsDate = new Date((excelDate - 25569) * 86400 * 1000); // Chuyển đổi từ số ngày Excel sang timestamp
+  return jsDate.toISOString().split("T")[0]; // Trả về định dạng YYYY-MM-DD
 };
 
 app.post("/api/lohang/upload", verifyToken, upload.single("file"), async (req, res) => {
-    const file = req.file;
-    const userId = req.user?.id; // Lấy ID người dùng từ token
+  const file = req.file;
+  const userId = req.user?.id; // Lấy ID người dùng từ token
 
-    if (!file) {
-        return res.status(400).json({ message: "Vui lòng upload file Excel." });
+  if (!file) {
+    return res.status(400).json({ message: "Vui lòng upload file Excel." });
+  }
+
+  try {
+    // Đọc file Excel
+    const workbook = xlsx.readFile(file.path);
+    const sheetName = workbook.SheetNames[0]; // Lấy sheet đầu tiên
+    const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    console.log("Dữ liệu từ file Excel:", sheetData);
+
+    // Kiểm tra dữ liệu trong file Excel
+    if (!sheetData || sheetData.length === 0) {
+      return res.status(400).json({ message: "File Excel không có dữ liệu." });
     }
 
+    const client = await pool.connect();
     try {
-        // Đọc file Excel
-        const workbook = xlsx.readFile(file.path);
-        const sheetName = workbook.SheetNames[0]; // Lấy sheet đầu tiên
-        const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        console.log("Dữ liệu từ file Excel:", sheetData);
+      await client.query("BEGIN"); // Bắt đầu transaction
 
-        // Kiểm tra dữ liệu trong file Excel
-        if (!sheetData || sheetData.length === 0) {
-            return res.status(400).json({ message: "File Excel không có dữ liệu." });
-        }
+      // Thêm lô hàng
+      const { idncc, tongtien, trangthai } = sheetData[0];
+      const ngaydukiennhapkho = excelDateToJSDate(sheetData[0].ngaydukiennhapkho);
+      const ngaythuctenhapkho = excelDateToJSDate(sheetData[0].ngaythuctenhapkho);
 
-        const client = await pool.connect();
-        try {
-            await client.query("BEGIN"); // Bắt đầu transaction
-
-            // Thêm lô hàng
-            const { idncc, tongtien, trangthai } = sheetData[0];
-            const ngaydukiennhapkho = excelDateToJSDate(sheetData[0].ngaydukiennhapkho);
-            const ngaythuctenhapkho = excelDateToJSDate(sheetData[0].ngaythuctenhapkho);
-
-            const loHangResult = await client.query(
-                `INSERT INTO lohang (idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho)
+      const loHangResult = await client.query(
+        `INSERT INTO lohang (idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho)
                  VALUES ($1, $2, $3, $4, $5) RETURNING idlohang`,
-                [idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho]
-            );
-            const idlohang = loHangResult.rows[0].idlohang;
+        [idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho]
+      );
+      const idlohang = loHangResult.rows[0].idlohang;
 
-            // Lọc dữ liệu chi tiết lô hàng
-            const chiTietLoHang = sheetData.filter(row => row.idvattu && row.soluong && row.dongianhap);
+      // Lọc dữ liệu chi tiết lô hàng
+      const chiTietLoHang = sheetData.filter(row => row.idvattu && row.soluong && row.dongianhap);
 
-            // Kiểm tra nếu không có chi tiết lô hàng
-            if (chiTietLoHang.length === 0) {
-                throw new Error("Không có chi tiết lô hàng hợp lệ trong file Excel.");
-            }
+      // Kiểm tra nếu không có chi tiết lô hàng
+      if (chiTietLoHang.length === 0) {
+        throw new Error("Không có chi tiết lô hàng hợp lệ trong file Excel.");
+      }
 
-            // Thêm chi tiết lô hàng
-            for (let i = 0; i < chiTietLoHang.length; i++) {
-                const { idvattu, soluong, dongianhap } = chiTietLoHang[i];
-                await client.query(
-                    `INSERT INTO chitietlohang (idlohang, idvattu, soluong, dongianhap)
+      // Thêm chi tiết lô hàng
+      for (let i = 0; i < chiTietLoHang.length; i++) {
+        const { idvattu, soluong, dongianhap } = chiTietLoHang[i];
+        await client.query(
+          `INSERT INTO chitietlohang (idlohang, idvattu, soluong, dongianhap)
                      VALUES ($1, $2, $3, $4)`,
-                    [idlohang, idvattu, soluong, dongianhap]
-                );
-            }
+          [idlohang, idvattu, soluong, dongianhap]
+        );
+      }
 
-            // Thêm vào bảng nhapkho
-            const nhapKhoResult = await client.query(
-                `INSERT INTO nhapkho (ngaynhap) VALUES (CURRENT_DATE) RETURNING idnhapkho`
-            );
-            const idnhapkho = nhapKhoResult.rows[0].idnhapkho;
+      // Thêm vào bảng nhapkho
+      const nhapKhoResult = await client.query(
+        `INSERT INTO nhapkho (ngaynhap) VALUES (CURRENT_DATE) RETURNING idnhapkho`
+      );
+      const idnhapkho = nhapKhoResult.rows[0].idnhapkho;
 
-            // Thêm chi tiết nhập kho
-            for (let i = 0; i < chiTietLoHang.length; i++) {
-                const { idvattu, soluong } = chiTietLoHang[i];
-                await client.query(
-                    `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
+      // Thêm chi tiết nhập kho
+      for (let i = 0; i < chiTietLoHang.length; i++) {
+        const { idvattu, soluong } = chiTietLoHang[i];
+        await client.query(
+          `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
                      VALUES ($1, $2, $3, $4, $5)`,
-                    [idnhapkho, idlohang, idvattu, userId, soluong]
-                );
-            }
+          [idnhapkho, idlohang, idvattu, userId, soluong]
+        );
+      }
 
-            await client.query("COMMIT"); // Commit transaction
-            res.status(201).json({ message: "Thêm lô hàng và nhập kho thành công.", idlohang, idnhapkho });
-        } catch (err) {
-            await client.query("ROLLBACK"); // Rollback nếu có lỗi
-            console.error("Lỗi khi thêm lô hàng và nhập kho:", err);
-            res.status(500).json({ message: "Có lỗi xảy ra khi thêm lô hàng và nhập kho." });
-        } finally {
-            client.release();
-        }
+
+      await client.query("COMMIT"); // Commit transaction
+      res.status(201).json({ message: "Thêm lô hàng và nhập kho thành công.", idlohang, idnhapkho });
     } catch (err) {
-        console.error("Lỗi khi xử lý file Excel:", err);
-        res.status(500).json({ message: "Có lỗi xảy ra khi xử lý file Excel." });
+      await client.query("ROLLBACK"); // Rollback nếu có lỗi
+      console.error("Lỗi khi thêm lô hàng và nhập kho:", err);
+      res.status(500).json({ message: "Có lỗi xảy ra khi thêm lô hàng và nhập kho." });
+    } finally {
+      client.release();
     }
+  } catch (err) {
+    console.error("Lỗi khi xử lý file Excel:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi xử lý file Excel." });
+  }
 });
 
 // Xóa lô hàng và chi tiết lô hàng
 app.delete("/api/lohang/:id", verifyToken, async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    const client = await pool.connect();
-    try {
-        await client.query("BEGIN"); // Bắt đầu transaction
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN"); // Bắt đầu transaction
 
-        // Lấy danh sách idnhapkho liên quan đến lô hàng
-        const nhapKhoResult = await client.query(
-            `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
-            [id]
-        );
+    // Lấy danh sách idnhapkho liên quan đến lô hàng
+    const nhapKhoResult = await client.query(
+      `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
+      [id]
+    );
 
-        const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
+    const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
 
-        // Xóa dữ liệu trong bảng lichsugiaodich
-        if (idNhapKhoList.length > 0) {
-            await client.query(
-                `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
-                [idNhapKhoList]
-            );
-        }
-
-        // Xóa dữ liệu trong bảng chitietnhapkho
-        await client.query(
-            `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
-            [id]
-        );
-
-        // Xóa dữ liệu trong bảng nhapkho
-        if (idNhapKhoList.length > 0) {
-            await client.query(
-                `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
-                [idNhapKhoList]
-            );
-        }
-
-        // Xóa dữ liệu trong bảng chitietlohang
-        await client.query(
-            `DELETE FROM chitietlohang WHERE idlohang = $1`,
-            [id]
-        );
-
-        // Xóa dữ liệu trong bảng lohang
-        const result = await client.query(
-            `DELETE FROM lohang WHERE idlohang = $1 RETURNING *`,
-            [id]
-        );
-
-        if (result.rowCount === 0) {
-            throw new Error("Lô hàng không tồn tại.");
-        }
-
-        await client.query("COMMIT"); // Commit transaction
-        res.status(200).json({ message: "Xóa lô hàng và dữ liệu liên quan thành công." });
-    } catch (err) {
-        await client.query("ROLLBACK"); // Rollback nếu có lỗi
-        console.error("Lỗi khi xóa lô hàng:", err);
-        res.status(500).json({ message: "Có lỗi xảy ra khi xóa lô hàng." });
-    } finally {
-        client.release();
+    // Xóa dữ liệu trong bảng lichsugiaodich
+    if (idNhapKhoList.length > 0) {
+      await client.query(
+        `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
+        [idNhapKhoList]
+      );
     }
+
+    // Xóa dữ liệu trong bảng chitietnhapkho
+    await client.query(
+      `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
+      [id]
+    );
+
+    // Xóa dữ liệu trong bảng nhapkho
+    if (idNhapKhoList.length > 0) {
+      await client.query(
+        `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
+        [idNhapKhoList]
+      );
+    }
+
+    // Xóa dữ liệu trong bảng chitietlohang
+    await client.query(
+      `DELETE FROM chitietlohang WHERE idlohang = $1`,
+      [id]
+    );
+
+    // Xóa dữ liệu trong bảng lohang
+    const result = await client.query(
+      `DELETE FROM lohang WHERE idlohang = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error("Lô hàng không tồn tại.");
+    }
+
+    await client.query("COMMIT"); // Commit transaction
+    res.status(200).json({ message: "Xóa lô hàng và dữ liệu liên quan thành công." });
+  } catch (err) {
+    await client.query("ROLLBACK"); // Rollback nếu có lỗi
+    console.error("Lỗi khi xóa lô hàng:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi xóa lô hàng." });
+  } finally {
+    client.release();
+  }
 });
 
 // Cập nhật trạng thái lô hàng
 app.put("/api/lohang/:id/trangthai", verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { trangthai } = req.body;
+  const { id } = req.params;
+  const { trangthai } = req.body;
 
-    // Kiểm tra trạng thái hợp lệ
-    const validStatuses = ["Đã nhập", "Đã Hủy"];
-    if (!validStatuses.includes(trangthai)) {
-        return res.status(400).json({ message: "Trạng thái không hợp lệ." });
+  // Kiểm tra trạng thái hợp lệ
+  const validStatuses = ["Đã nhập", "Đã Hủy"];
+  if (!validStatuses.includes(trangthai)) {
+    return res.status(400).json({ message: "Trạng thái không hợp lệ." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN"); // Bắt đầu transaction
+
+    // Lấy trạng thái hiện tại của lô hàng
+    const currentStatusResult = await client.query(
+      `SELECT trangthai FROM lohang WHERE idlohang = $1`,
+      [id]
+    );
+
+    if (currentStatusResult.rows.length === 0) {
+      throw new Error("Lô hàng không tồn tại.");
     }
 
-    const client = await pool.connect();
-    try {
-        await client.query("BEGIN"); // Bắt đầu transaction
+    const currentStatus = currentStatusResult.rows[0].trangthai;
 
-        // Lấy trạng thái hiện tại của lô hàng
-        const currentStatusResult = await client.query(
-            `SELECT trangthai FROM lohang WHERE idlohang = $1`,
-            [id]
+    // Nếu trạng thái không thay đổi, không làm gì cả
+    if (currentStatus === trangthai) {
+      return res.status(200).json({ message: "Trạng thái không thay đổi." });
+    }
+
+    // Cập nhật trạng thái lô hàng
+    const result = await client.query(
+      `UPDATE lohang SET trangthai = $1 WHERE idlohang = $2 RETURNING *`,
+      [trangthai, id]
+    );
+
+    // Nếu trạng thái là "Đã Hủy", xóa dữ liệu liên quan
+    if (trangthai === "Đã Hủy") {
+      const nhapKhoResult = await client.query(
+        `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
+        [id]
+      );
+
+      const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
+
+      if (idNhapKhoList.length > 0) {
+        await client.query(
+          `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
+          [idNhapKhoList]
+        );
+      }
+
+      await client.query(
+        `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
+        [id]
+      );
+
+      if (idNhapKhoList.length > 0) {
+        await client.query(
+          `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
+          [idNhapKhoList]
+        );
+      }
+    }
+
+    // Nếu trạng thái là "Đã nhập", thêm lại dữ liệu vào bảng nhapkho và chitietnhapkho
+    if (trangthai === "Đã nhập") {
+      // Chỉ thêm nếu trạng thái trước đó không phải là "Đã nhập"
+      if (currentStatus !== "Đã nhập") {
+        const nhapKhoResult = await client.query(
+          `INSERT INTO nhapkho (ngaynhap) VALUES (CURRENT_DATE) RETURNING idnhapkho`
+        );
+        const idnhapkho = nhapKhoResult.rows[0].idnhapkho;
+
+        const chiTietLoHang = await client.query(
+          `SELECT idvattu, soluong FROM chitietlohang WHERE idlohang = $1`,
+          [id]
         );
 
-        if (currentStatusResult.rows.length === 0) {
-            throw new Error("Lô hàng không tồn tại.");
-        }
-
-        const currentStatus = currentStatusResult.rows[0].trangthai;
-
-        // Nếu trạng thái không thay đổi, không làm gì cả
-        if (currentStatus === trangthai) {
-            return res.status(200).json({ message: "Trạng thái không thay đổi." });
-        }
-
-        // Cập nhật trạng thái lô hàng
-        const result = await client.query(
-            `UPDATE lohang SET trangthai = $1 WHERE idlohang = $2 RETURNING *`,
-            [trangthai, id]
-        );
-
-        // Nếu trạng thái là "Đã Hủy", xóa dữ liệu liên quan
-        if (trangthai === "Đã Hủy") {
-            const nhapKhoResult = await client.query(
-                `SELECT idnhapkho FROM chitietnhapkho WHERE idlohang = $1`,
-                [id]
-            );
-
-            const idNhapKhoList = nhapKhoResult.rows.map(row => row.idnhapkho);
-
-            if (idNhapKhoList.length > 0) {
-                await client.query(
-                    `DELETE FROM lichsugiaodich WHERE idnhapkho = ANY($1::int[])`,
-                    [idNhapKhoList]
-                );
-            }
-
-            await client.query(
-                `DELETE FROM chitietnhapkho WHERE idlohang = $1`,
-                [id]
-            );
-
-            if (idNhapKhoList.length > 0) {
-                await client.query(
-                    `DELETE FROM nhapkho WHERE idnhapkho = ANY($1::int[])`,
-                    [idNhapKhoList]
-                );
-            }
-        }
-
-        // Nếu trạng thái là "Đã nhập", thêm lại dữ liệu vào bảng nhapkho và chitietnhapkho
-        if (trangthai === "Đã nhập") {
-            // Chỉ thêm nếu trạng thái trước đó không phải là "Đã nhập"
-            if (currentStatus !== "Đã nhập") {
-                const nhapKhoResult = await client.query(
-                    `INSERT INTO nhapkho (ngaynhap) VALUES (CURRENT_DATE) RETURNING idnhapkho`
-                );
-                const idnhapkho = nhapKhoResult.rows[0].idnhapkho;
-
-                const chiTietLoHang = await client.query(
-                    `SELECT idvattu, soluong FROM chitietlohang WHERE idlohang = $1`,
-                    [id]
-                );
-
-                for (let i = 0; i < chiTietLoHang.rows.length; i++) {
-                    const { idvattu, soluong } = chiTietLoHang.rows[i];
-                    await client.query(
-                        `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
+        for (let i = 0; i < chiTietLoHang.rows.length; i++) {
+          const { idvattu, soluong } = chiTietLoHang.rows[i];
+          await client.query(
+            `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
                          VALUES ($1, $2, $3, $4, $5)`,
-                        [idnhapkho, id, idvattu, req.user?.id, soluong]
-                    );
-                }
-            }
+            [idnhapkho, id, idvattu, req.user?.id, soluong]
+          );
         }
-
-        await client.query("COMMIT"); // Commit transaction
-        res.status(200).json({ message: "Cập nhật trạng thái thành công.", lohang: result.rows[0] });
-    } catch (err) {
-        await client.query("ROLLBACK"); // Rollback nếu có lỗi
-        console.error("Lỗi khi cập nhật trạng thái lô hàng:", err);
-        res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật trạng thái lô hàng." });
-    } finally {
-        client.release();
+      }
     }
+
+    await client.query("COMMIT"); // Commit transaction
+    res.status(200).json({ message: "Cập nhật trạng thái thành công.", lohang: result.rows[0] });
+  } catch (err) {
+    await client.query("ROLLBACK"); // Rollback nếu có lỗi
+    console.error("Lỗi khi cập nhật trạng thái lô hàng:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật trạng thái lô hàng." });
+  } finally {
+    client.release();
+  }
 });
+
+app.get("/api/tonkho/:idvattu/xuat", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        XK.NgayXuat,
+        CTXK.SoLuong
+      FROM XuatKho XK
+      JOIN ChiTietXuatKho CTXK ON XK.IDXuatKho = CTXK.IDXuatKho
+      WHERE CTXK.IDVatTu = $1
+      ORDER BY XK.NgayXuat ASC
+    `, [idvattu]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching export details:", err);
+    res.status(500).json({ error: "Lỗi khi lấy chi tiết xuất kho." });
+  }
+});
+
+app.get("/api/tonkho/:idvattu/nhap", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        NK.NgayNhap,
+        CTNK.SoLuong
+      FROM NhapKho NK
+      JOIN ChiTietNhapKho CTNK ON NK.IDNhapKho = CTNK.IDNhapKho
+      WHERE CTNK.IDVatTu = $1
+      ORDER BY NK.NgayNhap ASC
+    `, [idvattu]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching import details:", err);
+    res.status(500).json({ error: "Lỗi khi lấy chi tiết nhập kho." });
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
