@@ -392,7 +392,7 @@ app.get("/api/vattu", verifyToken, async (req, res) => {
 
 
 app.post("/xuatkho", verifyToken, async (req, res) => {
-  const { vatTuGroups, NguoiYeuCau, IDNguoiDung } = req.body;
+  const { vatTuGroups, NguoiYeuCau, PhoneNguoiYeuCau, IDNguoiDung} = req.body;
 
   if (!vatTuGroups?.length || !NguoiYeuCau || !IDNguoiDung) {
     return res.status(400).json({
@@ -446,14 +446,14 @@ app.post("/xuatkho", verifyToken, async (req, res) => {
       const IDVatTu = parseInt(group.IDVatTu, 10);
       const SoLuong = parseInt(group.SoLuong, 10);
       await client.query(
-        "INSERT INTO ChiTietXuatKho (IDXuatKho, IDVatTu, SoLuong, NguoiYeuCau, IDNguoiDung) VALUES ($1, $2, $3, $4, $5)",
-        [IDXuatKho, IDVatTu, SoLuong, NguoiYeuCau, IDNguoiDung]
+        "INSERT INTO ChiTietXuatKho (IDXuatKho, IDVatTu, SoLuong, NguoiYeuCau, PhoneNguoiYeuCau, IDNguoiDung) VALUES ($1, $2, $3, $4, $5, $6)",
+        [IDXuatKho, IDVatTu, SoLuong, NguoiYeuCau, PhoneNguoiYeuCau, IDNguoiDung]
       );
     }
 
     // Lấy thông tin chi tiết
     const result = await client.query(
-      `SELECT XK.IDXuatKho, CT.IDVatTu, VT.TenVatTu, CT.SoLuong, CT.NguoiYeuCau, CT.IDNguoiDung, ND.TenDangNhap AS TenNguoiDung
+      `SELECT XK.IDXuatKho, CT.IDVatTu, VT.TenVatTu, CT.SoLuong, CT.NguoiYeuCau, CT.PhoneNguoiYeuCau, CT.IDNguoiDung, ND.TenDangNhap AS TenNguoiDung
        FROM XuatKho XK
        JOIN ChiTietXuatKho CT ON XK.IDXuatKho = CT.IDXuatKho
        JOIN VatTu VT ON CT.IDVatTu = VT.IDVatTu
@@ -499,23 +499,31 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
       ORDER BY lgd.ngaygiaodich DESC
     `);
 
-     // transactions by idgiaodich
-     const groupedData = result.rows.reduce((acc, gd) => {
-      const id = gd.idgiaodich;
-      if (!acc[id]) {
-        acc[id] = {
-          idgiaodich: id,
-          inventories: [],
-          ngaygiaodich: gd.ngaygiaodich,
-        };
-      }
-      acc[id].inventories.push(gd);
-      return acc;
-    }, {});
+// trả về đã group, nhóm gd bằng reduce
+const groupedData = result.rows.reduce((acc, gd) => {
+  const id = gd.idgiaodich;
+  if (!acc[id]) {
+    const loai = gd.loaigiaodich?.toLowerCase(); // tránh null
+    acc[id] = {
+      idgiaodich: id,
+      loaigiaodich: gd.loaigiaodich,
+      idnhapkho: loai.includes('nhap') ? gd.idnhapkho : null,
+      idxuatkho: loai.includes('xuat') ? gd.idxuatkho : null,      
+      tennguoidung: gd.tennguoidung,
+      ngaygiaodich: gd.ngaygiaodich,
+      inventories: [],
+    };
+  }
+  acc[id].inventories.push({
+    tenvattu: gd.tenvattu,
+    soluong: gd.soluong,
+  });
+ 
+  return acc;
+}, {});
 
-   
-    const groupedTransactions = Object.values(groupedData);
-    res.status(200).json(result.rows);
+const groupedTransactions = Object.values(groupedData);
+res.status(200).json(groupedTransactions);
   } catch (err) {
     console.error("Error fetching transaction history:", err);
     res.status(500).json({ error: "Có lỗi xảy ra khi lấy lịch sử giao dịch." });
@@ -581,6 +589,47 @@ app.get("/api/thongke-nhapxuat", verifyToken, async (req, res) => {
     res.status(500).json({ error: "Lỗi máy chủ" });
   }
 });
+
+app.get("/api/tonkho/:idvattu/xuat", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        XK.NgayXuat,
+        CTXK.SoLuong
+      FROM XuatKho XK
+      JOIN ChiTietXuatKho CTXK ON XK.IDXuatKho = CTXK.IDXuatKho
+      WHERE CTXK.IDVatTu = $1
+      ORDER BY XK.NgayXuat ASC
+    `, [idvattu]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching export details:", err);
+    res.status(500).json({ error: "Lỗi khi lấy chi tiết xuất kho." });
+  }
+});
+
+app.get("/api/tonkho/:idvattu/nhap", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        NK.NgayNhap,
+        CTNK.SoLuong
+      FROM NhapKho NK
+      JOIN ChiTietNhapKho CTNK ON NK.IDNhapKho = CTNK.IDNhapKho
+      WHERE CTNK.IDVatTu = $1
+      ORDER BY NK.NgayNhap ASC
+    `, [idvattu]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching import details:", err);
+    res.status(500).json({ error: "Lỗi khi lấy chi tiết nhập kho." });
+  }
+});
+
 
 app.post("/api/nhacungcap", verifyToken, async (req, res) => {
   const { tenncc, sodienthoai, email, diachi, stk, mst } = req.body;
@@ -683,6 +732,7 @@ app.get("/api/xuatkho", verifyToken, async (req, res) => {
         VT.TenVatTu,
         CTXK.SoLuong,
         CTXK.NguoiYeuCau,
+        CTXK.PhoneNguoiYeuCau,
         CTXK.IDNguoiDung,
         ND.TenDangNhap AS TenNguoiDung
       FROM XuatKho XK
@@ -735,7 +785,7 @@ app.get('/api/backup', verifyToken, async (req, res) => {
   const dumpCommand = `pg_dump -U postgres -d QLNK -F c -f "${filePath}"`;
 
   // pass postgre, nhớ tự chỉnh lại pass của bản thân
-  const env = { ...process.env, PGPASSWORD: "123123" };
+  const env = { ...process.env, PGPASSWORD: "051203" };
 
   exec(dumpCommand, { env }, (error, stdout, stderr) => {
     if (error) {

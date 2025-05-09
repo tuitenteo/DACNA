@@ -13,6 +13,7 @@ import {
   Divider,
   Typography,
   ListItemIcon,
+  Alert,
 } from "@mui/material";
 import {
   Inventory,
@@ -37,6 +38,7 @@ import TonKho from "./TonKho";
 import NhaCungCap from "./NhaCungCap";
 import ThongKeGiaoDich from "./ThongKeGiaoDich";
 import NhapKho from "./NhapKho";
+import ThongBaoTonKho from "./ThongBaoTonKho";
 import logo from "../assets/myicon.png";
 import { useTheme } from "@mui/material/styles";
 
@@ -48,7 +50,13 @@ const BangDieuHuong = () => {
   const drawerWidth = 240;
   const collapsedWidth = 0;
   const theme = useTheme();
-
+  const [showWarnings, setShowWarnings] = useState(true); // set thông báo hiện 
+  const [warnings, setWarnings] = useState({
+    soLuongIt: [],
+    sapHetHan: [],
+    daHetHan: [],
+    hetVatTu: [],
+  });  
   const handleToggleReports = () => {
     setOpenReports(!openReports);
   };
@@ -324,6 +332,50 @@ const BangDieuHuong = () => {
             fontSize: "16px",
           }}
         >
+          <ThongBaoTonKho onWarningsUpdate={setWarnings} />
+           {/* hiển thị thông báo tồn kho và tắt có điều kieẹn */}
+      {showWarnings && (
+        <Box sx={{ mb: 2 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Thông Báo Tồn Kho</Typography>
+            <IconButton size="small" onClick={() => setShowWarnings(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          <Collapse in={showWarnings}>
+            <div>
+              {warnings.soLuongIt.length > 0 && (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  Có {warnings.soLuongIt.length} vật tư có số lượng ít.{" "}
+                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                </Alert>
+              )}
+
+              {warnings.sapHetHan.length > 0 && (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  Có {warnings.sapHetHan.length} vật tư sắp hết hạn.{" "}
+                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                </Alert>
+              )}
+
+              {warnings.daHetHan.length > 0 && (
+                <Alert severity="error" sx={{ mb: 1 }}>
+                  Có {warnings.daHetHan.length} vật tư đã hết hạn.{" "}
+                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                </Alert>
+              )}
+
+              {warnings.hetVatTu.length > 0 && (
+                <Alert severity="error" sx={{ mb: 1 }}>
+                  Có {warnings.hetVatTu.length} vật tư đã hết hàng.{" "}
+                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                </Alert>
+              )}
+            </div>
+          </Collapse>
+        </Box>
+      )}
           <Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route path="nguoidung" element={<NguoiDung />} />
@@ -335,6 +387,7 @@ const BangDieuHuong = () => {
               <Route path="tonkho" element={<TonKho />} />
               <Route path="thongkegiaodich" element={<ThongKeGiaoDich />} />
               <Route path="nhacungcap" element={<NhaCungCap />} />
+              <Route path="thongbaotonkho" element={<ThongBaoTonKho/>} />
             </Routes>
           </Suspense>
         </Box>

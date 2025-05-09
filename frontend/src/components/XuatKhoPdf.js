@@ -52,6 +52,12 @@ const XuatKhoPdf = ({ phieuXuatKho }) => {
         <p><strong>Ngày xuất:</strong> {formatDateToDDMMYYYY(new Date())}</p>
         <p><strong>Mã phiếu:</strong> {phieuXuatKho[0]?.idxuatkho || 'Không xác định'}</p>
         <p><strong>Người yêu cầu:</strong> {phieuXuatKho[0]?.nguoiyeucau || 'Không xác định'}</p>
+       <p><strong>Số điện thoại:</strong> 
+  {phieuXuatKho[0]?.phoneNguoiYeuCau ?? 
+   phieuXuatKho[0]?.phonenguoiyeucau ?? 
+   phieuXuatKho[0]?.sodienthoai ??
+   'Không xác định'}
+</p>
         <p><strong>Mã người dùng:</strong> {phieuXuatKho[0]?.idnguoidung || 'Không xác định'}</p>
         <p><strong>Tên người dùng:</strong> {phieuXuatKho[0]?.tennguoidung || 'Không xác định'}</p>
 

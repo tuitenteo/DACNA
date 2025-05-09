@@ -60,6 +60,7 @@ const DanhSachXuatKho = () => {
     const matchesSearch =
       item.tenvattu.toLowerCase().includes(query) ||
       item.nguoiyeucau.toLowerCase().includes(query) ||
+      item.phonenguoiyeucau.toString().includes(query) ||
       item.tennguoidung.toLowerCase().includes(query) ||
       item.idxuatkho.toString().includes(query) ||
       item.idvattu.toString().includes(query) ;
@@ -170,6 +171,7 @@ const DanhSachXuatKho = () => {
               <TableCell>Tên Vật Tư</TableCell>
               <TableCell>Số Lượng</TableCell>
               <TableCell>Người Yêu Cầu</TableCell>
+              <TableCell>SĐT Người Yêu Cầu</TableCell>
               <TableCell>Người Xuất</TableCell>
               <TableCell>Xuất PDF</TableCell>
             </TableRow>
@@ -183,6 +185,7 @@ const DanhSachXuatKho = () => {
                 <TableCell>{item.tenvattu}</TableCell>
                 <TableCell>{item.soluong}</TableCell>
                 <TableCell>{item.nguoiyeucau}</TableCell>
+                <TableCell>{item.phonenguoiyeucau}</TableCell>
                 <TableCell>{item.tennguoidung}</TableCell>
                 <TableCell>
                   <Button
