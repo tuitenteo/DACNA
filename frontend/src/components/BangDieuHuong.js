@@ -43,7 +43,8 @@ import BaoGia from "./BaoGia";
 import SoSanhBaoGia from "./SoSanhBaoGia";
 import LoHang from "./LoHang";
 import ThemLoHang from "./ThemLoHang";
-
+import ThanhToan from "./ThanhToan"; 
+import LichSuThanhToan from "./LichSuThanhToan";
 import logo from "../assets/myicon.png";
 import { useTheme } from "@mui/material/styles";
 
@@ -210,6 +211,19 @@ const BangDieuHuong = () => {
                   sx={{ color: theme.palette.text.primary }}
                 />
               </ListItem>
+              <ListItem
+  component={Link}
+  to="/dashboard/thanh-toan"
+  selected={location.pathname.includes("thanh-toan")}
+>
+  <ListItemIcon>
+    <BarChart sx={{ color: getIconColor("thanh-toan") }} />
+  </ListItemIcon>
+  <ListItemText
+    primary="Thanh Toán"
+    sx={{ color: theme.palette.text.primary }}
+  />
+</ListItem>
               <ListItem
                 
                 component={Link}
@@ -397,7 +411,8 @@ const BangDieuHuong = () => {
               <Route path="so-sanh-bao-gia" element={<SoSanhBaoGia />} />
               <Route path="lohang" element={<LoHang />} />
               <Route path="them-lo-hang" element={<ThemLoHang />} />
-
+              <Route path="thanh-toan" element={<ThanhToan />} />
+              <Route path="lich-su-thanh-toan" element={<LichSuThanhToan />} />
             </Routes>
           </Suspense>
         </Box>
