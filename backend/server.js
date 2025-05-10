@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  //password: "kyanh",
-  password: "123123",
+  password: "kyanh",
+  // password: "123123",
   port: 5432,
 });
 
@@ -493,7 +493,6 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
         nd.tendangnhap AS tennguoidung,
         lgd.loaigiaodich,
         lgd.soluong,
-         lgd.dongianhap, 
         lgd.ngaygiaodich
       FROM lichsugiaodich lgd
       LEFT JOIN vattu vt ON lgd.idvattu = vt.idvattu
@@ -520,7 +519,6 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
         idvattu: gd.idvattu,
         tenvattu: gd.tenvattu,
         soluong: gd.soluong,
-        dongianhap: gd.dongianhap || null // Nếu có cột này
       });
 
       return acc;
@@ -751,7 +749,7 @@ app.get('/api/backup', verifyToken, async (req, res) => {
   const dumpCommand = `pg_dump -U postgres -d QLNK -F c -f "${filePath}"`;
 
   // pass postgre, nhớ tự chỉnh lại pass của bản thân
-  const env = { ...process.env, PGPASSWORD: "051203" };
+  const env = { ...process.env, PGPASSWORD: "kyanh" };
 
   exec(dumpCommand, { env }, (error, stdout, stderr) => {
     if (error) {

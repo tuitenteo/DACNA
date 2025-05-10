@@ -151,50 +151,58 @@ const LichSuGiaoDich = () => {
         </div>
       </div>
 
-     {/* Bảng danh sách giao dịch */}
-     <TableContainer component={Paper} style={{ marginTop: "20px" }}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Mã Giao Dịch</TableCell>
-            <TableCell>Mã Vật Tư</TableCell>
-            <TableCell>Tên Vật Tư</TableCell>
-            <TableCell>Loại Giao Dịch</TableCell>
-            <TableCell>Số Lượng</TableCell>
-            <TableCell>Người Dùng</TableCell>
-            <TableCell>Ngày Giao Dịch</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {paginatedLichSuGiaoDich.map((giaoDich) => (
-            <TableRow key={giaoDich.idgiaodich}>
-              <TableCell>{giaoDich.idgiaodich}</TableCell>
-              <TableCell>{giaoDich.idvattu}</TableCell>
-              <TableCell>{giaoDich.tenvattu || "Không xác định"}</TableCell>
-              <TableCell>{giaoDich.loaigiaodich}</TableCell>
-              <TableCell>{giaoDich.soluong}</TableCell>
-              <TableCell>{giaoDich.tennguoidung || "Không xác định"}</TableCell>
-              <TableCell>{formatDateToDDMMYYYY(giaoDich.ngaygiaodich)}</TableCell>
+      {/* Bảng danh sách giao dịch */}
+      <TableContainer component={Paper} style={{ marginTop: "20px" }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Mã Giao Dịch</TableCell>
+              <TableCell>Mã Vật Tư</TableCell>
+              <TableCell>Tên Vật Tư</TableCell>
+              <TableCell>Loại Giao Dịch</TableCell>
+              <TableCell>Số Lượng</TableCell>
+              <TableCell>Người Dùng</TableCell>
+              <TableCell>Ngày Giao Dịch</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {paginatedLichSuGiaoDich.map((giaoDich) =>
+              giaoDich.inventories.map((inventory, index) => (
+                <TableRow key={`${giaoDich.idgiaodich}-${index}`}>
+                  <TableCell>{giaoDich.idgiaodich}</TableCell>
+                  <TableCell>{inventory.idvattu}</TableCell>
+                  <TableCell>
+                    {inventory.tenvattu || "Không xác định"}
+                  </TableCell>
+                  <TableCell>{giaoDich.loaigiaodich}</TableCell>
+                  <TableCell>{inventory.soluong}</TableCell>
+                  <TableCell>
+                    {giaoDich.tennguoidung || "Không xác định"}
+                  </TableCell>
+                  <TableCell>
+                    {formatDateToDDMMYYYY(giaoDich.ngaygiaodich)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-    {/* Phân trang */}
-    <TablePagination
-      component="div"
-      count={filteredLichSuGiaoDich.length}
-      page={currentPage - 1}
-      onPageChange={(e, newPage) => setCurrentPage(newPage + 1)}
-      rowsPerPage={rowsPerPage}
-      onRowsPerPageChange={(e) => setRowsPerPage(Number(e.target.value))}
-      labelRowsPerPage="Số dòng"
-      labelDisplayedRows={({ from, to, count }) =>
-        `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
-      }
-    />
-  </div>
+      {/* Phân trang */}
+      <TablePagination
+        component="div"
+        count={filteredLichSuGiaoDich.length}
+        page={currentPage - 1}
+        onPageChange={(e, newPage) => setCurrentPage(newPage + 1)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => setRowsPerPage(Number(e.target.value))}
+        labelRowsPerPage="Số dòng"
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
+        }
+      />
+    </div>
   );
 };
 

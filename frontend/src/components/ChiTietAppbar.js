@@ -34,7 +34,6 @@ const ChiTietAppbar = () => {
         });
 
         const data = res.data;
-        console.log("API Data:", data);
 
         // Gộp các giao dịch cùng idxuat hoặc nhập
         const mergedData =
@@ -72,7 +71,6 @@ const ChiTietAppbar = () => {
           }, {});
 
         const mergedArray = Object.values(mergedData);
-        console.log("Merged Data:", mergedData);
         // Gán trạng thái `read` dựa trên `seenIds`
         const processedData = mergedArray
           .map((gd) => ({
