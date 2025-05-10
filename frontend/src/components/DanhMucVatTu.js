@@ -16,6 +16,7 @@ import {
   TableBody,
   TablePagination,
 } from "@mui/material";
+import { formatDateToDDMMYYYY } from "../utils/utils"; // Import formatDateToDDMMYYYY function
 
 const DanhMucVatTu = () => {
   const [danhMucVatTu, setDanhMucVatTu] = useState([]); // Danh sách danh mục
@@ -121,16 +122,6 @@ const DanhMucVatTu = () => {
         return b.tenvattu.localeCompare(a.tenvattu);
       }
     });
-
-  // Hàm định dạng ngày thành dd/mm/yyyy
-  const formatDateToDDMMYYYY = (date) => {
-    if (!date) return "Không xác định";
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
 
   // Tính toán dữ liệu phân trang
   const startIndex = (currentPage - 1) * rowsPerPage;

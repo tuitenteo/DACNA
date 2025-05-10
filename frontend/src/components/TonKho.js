@@ -272,23 +272,31 @@ const TonKho = () => {
                 <TableCell>{item.tendanhmuc || "Không xác định"}</TableCell>
                 <TableCell>{formatDateToDDMMYYYY(item.ngayhethan)}</TableCell>
                 <TableCell>
-  {item.tongnhap}{" "}
-  <span
-    style={{ color: "blue", cursor: "pointer", textDecoration: "underline" }}
-    onClick={() => handleOpenDetail("nhap", item.idvattu)}
-  >
-    chi tiết
-  </span>
-</TableCell>
-               <TableCell>
-  {item.tongxuat}{" "}
-  <span
-    style={{ color: "blue", cursor: "pointer", textDecoration: "underline" }}
-    onClick={() => handleOpenDetail("xuat", item.idvattu)}
-  >
-    chi tiết
-  </span>
-</TableCell>
+                  {item.tongnhap}
+                  <span
+                    style={{
+                      color: "blue",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                    onClick={() => handleOpenDetail("nhap", item.idvattu)}
+                  >
+                    chi tiết
+                  </span>
+                </TableCell>
+                <TableCell>
+                  {item.tongxuat}
+                  <span
+                    style={{
+                      color: "blue",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                    onClick={() => handleOpenDetail("xuat", item.idvattu)}
+                  >
+                    chi tiết
+                  </span>
+                </TableCell>
                 <TableCell>{item.tonkhohientai}</TableCell>
                 <TableCell>{item.tonkhothucte || "Không xác định"}</TableCell>
               </TableRow>
@@ -296,25 +304,30 @@ const TonKho = () => {
           </TableBody>
         </Table>
       </TableContainer>
-{/* hiển thị modal chi tiết */}
-      <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
-  <DialogTitle>{modalTitle}</DialogTitle>
-  <DialogContent dividers>
-    {detailList.length > 0 ? (
-      detailList.map((item, index) => (
-        <p key={index}>
-          {formatDateToDDMMYYYY(item.ngayxuat || item.ngaynhap)}: {item.soluong}
-        </p>
-      ))
-    ) : (
-      <p>Không có dữ liệu chi tiết.</p>
-    )}
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={() => setOpenModal(false)}>Đóng</Button>
-  </DialogActions>
-</Dialog>
-
+      {/* hiển thị modal chi tiết */}
+      <Dialog
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{modalTitle}</DialogTitle>
+        <DialogContent dividers>
+          {detailList.length > 0 ? (
+            detailList.map((item, index) => (
+              <p key={index}>
+                {formatDateToDDMMYYYY(item.ngayxuat || item.ngaynhap)}:{" "}
+                {item.soluong}
+              </p>
+            ))
+          ) : (
+            <p>Không có dữ liệu chi tiết.</p>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenModal(false)}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Phân trang */}
       <TablePagination

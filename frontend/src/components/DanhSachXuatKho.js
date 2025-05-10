@@ -91,8 +91,8 @@ const DanhSachXuatKho = () => {
     const filteredTransactions = xuatKhoData.filter(
       (item) => item.idxuatkho === transaction.idxuatkho
     );
-    setSelectedTransaction(filteredTransactions); // Wrap transaction in an array for XuatKhoPdf
-    setOpenPdfDialog(true);
+  setSelectedTransaction(filteredTransactions); // Truyền dữ liệu bao gồm dongia
+  setOpenPdfDialog(true);
   };
 
   const handleClosePdfDialog = () => {
@@ -173,6 +173,7 @@ const DanhSachXuatKho = () => {
               <TableCell>Người Yêu Cầu</TableCell>
               <TableCell>SĐT Người Yêu Cầu</TableCell>
               <TableCell>Người Xuất</TableCell>
+              <TableCell>Đơn Giá</TableCell>
               <TableCell>Xuất PDF</TableCell>
             </TableRow>
           </TableHead>
@@ -187,6 +188,7 @@ const DanhSachXuatKho = () => {
                 <TableCell>{item.nguoiyeucau}</TableCell>
                 <TableCell>{item.phonenguoiyeucau}</TableCell>
                 <TableCell>{item.tennguoidung}</TableCell>
+                <TableCell>{item.dongia}</TableCell>
                 <TableCell>
                   <Button
                     onClick={() => handleDownloadClick(item)}

@@ -454,7 +454,15 @@ app.post("/xuatkho", verifyToken, async (req, res) => {
 
     // Lấy thông tin chi tiết
     const result = await client.query(
-      `SELECT XK.IDXuatKho, CT.IDVatTu, VT.TenVatTu, CT.SoLuong, CT.NguoiYeuCau, CT.PhoneNguoiYeuCau, CT.IDNguoiDung, ND.TenDangNhap AS TenNguoiDung
+      `SELECT 
+        XK.IDXuatKho, 
+        CT.IDVatTu, 
+        VT.TenVatTu, 
+        CT.SoLuong, 
+        CT.NguoiYeuCau, 
+        CT.PhoneNguoiYeuCau, 
+        CT.IDNguoiDung, 
+        ND.TenDangNhap AS TenNguoiDung,
        FROM XuatKho XK
        JOIN ChiTietXuatKho CT ON XK.IDXuatKho = CT.IDXuatKho
        JOIN VatTu VT ON CT.IDVatTu = VT.IDVatTu
@@ -698,11 +706,13 @@ app.get("/api/xuatkho", verifyToken, async (req, res) => {
         CTXK.NguoiYeuCau,
         CTXK.PhoneNguoiYeuCau,
         CTXK.IDNguoiDung,
-        ND.TenDangNhap AS TenNguoiDung
+        ND.TenDangNhap AS TenNguoiDung,
+        CTLH.DonGiaNhap AS DonGia
       FROM XuatKho XK
       JOIN ChiTietXuatKho CTXK ON XK.IDXuatKho = CTXK.IDXuatKho
       JOIN VatTu VT ON CTXK.IDVatTu = VT.IDVatTu
       JOIN NguoiDung ND ON CTXK.IDNguoiDung = ND.IDNguoiDung
+      LEFT JOIN ChiTietLoHang CTLH ON CTXK.IDVatTu = CTLH.IDVatTu -- Kết nối với ChiTietLoHang
       ORDER BY XK.NgayXuat DESC
     `);
     res.status(200).json(result.rows);

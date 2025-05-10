@@ -14,6 +14,7 @@ import {
   Paper,
   TablePagination,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material"; // Import icons
 
 const NguoiDung = () => {
   const [nguoiDung, setNguoiDung] = useState([]);
@@ -30,6 +31,7 @@ const NguoiDung = () => {
     trangthai: "active",
     email: "",
   });
+  const [showPassword, setShowPassword] = useState(false); // gọi hàm để dùng Ẩn/hiện mật khẩu
 
   const navigate = useNavigate();
 
@@ -248,6 +250,7 @@ const NguoiDung = () => {
             </TableRow>
           </TableHead>
           <TableBody>
+            {/* Hiển thị danh sách người dùng */}
             {paginatedNguoiDung.map((user) => (
               <TableRow key={user.idnguoidung}>
                 <TableCell>{user.idnguoidung}</TableCell>
@@ -255,7 +258,7 @@ const NguoiDung = () => {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   {user.vaitro === "QuanLy" ? "Quản Lý" : user.vaitro}
-                </TableCell>{" "}
+                </TableCell>
                 <TableCell>
                   {user.trangthai === "locked" ? "Đã khóa" : "Hoạt động"}
                 </TableCell>
@@ -333,17 +336,30 @@ const NguoiDung = () => {
               setFormData({ ...formData, tendangnhap: e.target.value })
             }
             required
+            autoComplete="off" // Ngăn trình duyệt tự động điền
           />
           <TextField
             fullWidth
             margin="normal"
             label="Mật khẩu"
             name="matkhau"
+            type={showPassword ? "text" : "password"} // Ẩn hoặc hiện mật khẩu
             value={formData.matkhau}
             onChange={(e) =>
               setFormData({ ...formData, matkhau: e.target.value })
             }
             required
+            autoComplete="new-password"
+            InputProps={{
+              endAdornment: selectedUser !== null && ( // Nếu người dùng có giá trị thì hiển thị icon con mắt
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              ),
+            }}
           />
           <TextField
             fullWidth

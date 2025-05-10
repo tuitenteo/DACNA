@@ -2,24 +2,43 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import XuatKhoPdf from "./XuatKhoPdf";
 import DanhSachXuatKho from "./DanhSachXuatKho";
-import { Dialog, DialogTitle, DialogContent, Button, Box } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Button,
+  Box,
+  TextField,
+  Autocomplete,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 const XuatKho = () => {
   const [NguoiYeuCau, setNguoiYeuCau] = useState("");
-  const [IDNguoiDung, setIDNguoiDung] = useState("");
   const [PhoneNguoiYeuCau, setPhoneNguoiYeuCau] = useState("");
+  const [IDNguoiDung, setIDNguoiDung] = useState("");
   const [TenNguoiDung, setTenNguoiDung] = useState("");
-  const [vatTuGroups, setVatTuGroups] = useState([
-    { IDVatTu: "", TenVatTu: "", SoLuong: "", TonKho: null, DonGia: null }, // Nhóm mặc định
-  ]);
+  const [vatTuGroups, setVatTuGroups] = useState([]);
+  const [currentVatTu, setCurrentVatTu] = useState({
+    IDVatTu: "",
+    TenVatTu: "",
+    SoLuong: "",
+    DonGia: "",
+  });
   const [vatTuList, setVatTuList] = useState([]);
   const [nguoiDungList, setNguoiDungList] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [phieuXuatKho, setPhieuXuatKho] = useState(null);
   const [open, setOpen] = useState(false);
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,67 +65,17 @@ const XuatKho = () => {
     fetchData();
   }, []);
 
-  const handleVatTuChange = (index, field, value) => {
-    const updatedGroups = [...vatTuGroups];
-    updatedGroups[index][field] = value;
-
-    if (field === "IDVatTu") {
-      const selectedVatTu = vatTuList.find(
-        (vt) => vt.idvattu === parseInt(value)
-      );
-
-      updatedGroups[index].TenVatTu = selectedVatTu ? selectedVatTu.tenvattu : "";
-    }
-
-    if (field === "TenVatTu") {
-      const selectedVatTu = vatTuList.find((vt) => vt.tenvattu === value);
-      updatedGroups[index].IDVatTu = selectedVatTu ? selectedVatTu.idvattu : "";
-      updatedGroups[index].TonKho = Number(selectedVatTu ? selectedVatTu.tonkhohientai : "");
-      updatedGroups[index].DonGia = Number(selectedVatTu?.dongia || 0);
-    }
-
-    setVatTuGroups(updatedGroups);
-  };
-
-  const handleAddVatTuGroup = () => {
-    setVatTuGroups([
-      ...vatTuGroups,
-      { IDVatTu: "", TenVatTu: "", SoLuong: "" },
-    ]);
-  };
-
-  const handleRemoveVatTuGroup = (index) => {
-    if (vatTuGroups.length > 1) {
-      const updatedGroups = vatTuGroups.filter((_, i) => i !== index);
-      setVatTuGroups(updatedGroups);
-    } else {
-      alert("Phải có ít nhất một vật tư!");
-    }
-  };
-
-  const handleNguoiDungChange = (field, value) => {
-    if (field === "IDNguoiDung") {
-      setIDNguoiDung(value);
-      const selectedNguoiDung = nguoiDungList.find(
-        (nd) => nd.idnguoidung === parseInt(value)
-      );
-      setTenNguoiDung(selectedNguoiDung ? selectedNguoiDung.tendangnhap : "");
-    }
-    if (field === "TenNguoiDung") {
-      setTenNguoiDung(value);
-      const selectedNguoiDung = nguoiDungList.find(
-        (nd) => nd.tendangnhap === value
-      );
-      // setPhoneNguoiYeuCau(selectedNguoiDung ? selectedNguoiDung.sodienthoai : "");
-      setIDNguoiDung(selectedNguoiDung ? selectedNguoiDung.idnguoidung : "");
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
     setError("");
     setPhieuXuatKho(null);
+
+    // Kiểm tra nếu chưa có vật tư nào được thêm
+    if (vatTuGroups.length === 0) {
+      setError("Vui lòng thêm ít nhất một vật tư trước khi xuất kho.");
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -117,10 +86,9 @@ const XuatKho = () => {
           SoLuong: parseInt(group.SoLuong, 10), // Chuyển đổi sang số
         })),
         NguoiYeuCau,
-        PhoneNguoiYeuCau: PhoneNguoiYeuCau || null,
-        IDNguoiDung: parseInt(IDNguoiDung, 10),
+        PhoneNguoiYeuCau,
+        IDNguoiDung: parseInt(IDNguoiDung, 10), // Chuyển đổi sang số
       };
-
 
       console.log("Dữ liệu gửi đi:", JSON.stringify(data, null, 2)); // Log dữ liệu gửi đi
 
@@ -133,9 +101,9 @@ const XuatKho = () => {
       if (response.data.success) {
         setMessage(response.data.message);
         setPhieuXuatKho(response.data.data);
-        setVatTuGroups([{ IDVatTu: "", TenVatTu: "", SoLuong: "" }]);
+        setVatTuGroups([]); // Xóa danh sách vật tư sau khi xuất kho thành công
         setNguoiYeuCau("");
-        setPhoneNguoiYeuCau("");
+        setPhoneNguoiYeuCau(""); // Reset số điện thoại
         setIDNguoiDung("");
         setTenNguoiDung("");
       }
@@ -147,8 +115,55 @@ const XuatKho = () => {
     }
   };
 
+  const handleAddVatTu = () => {
+    if (
+      currentVatTu.IDVatTu &&
+      currentVatTu.TenVatTu &&
+      currentVatTu.SoLuong &&
+      currentVatTu.DonGia
+    ) {
+      setVatTuGroups([...vatTuGroups, currentVatTu]);
+      setCurrentVatTu({
+        IDVatTu: "",
+        TenVatTu: "",
+        SoLuong: "",
+        DonGia: "",
+        TonKhoHienTai: 0,
+        NgayHetHan: "",
+      });
+      setError(""); // Xóa lỗi nếu thêm thành công
+    } else {
+      alert("Vui lòng nhập đầy đủ thông tin vật tư!");
+    }
+  };
+
+   const isDisabled = () => {
+    const { TonKhoHienTai, NgayHetHan } = currentVatTu;
+    return TonKhoHienTai === 0 || new Date(NgayHetHan) <= new Date();
+  };
+
+  const handleRemoveVatTu = (index) => {
+    const updatedGroups = vatTuGroups.filter((_, i) => i !== index);
+    setVatTuGroups(updatedGroups);
+  };
+
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    setError(""); // Xóa lỗi khi đóng form
+    setCurrentVatTu({
+      IDVatTu: "",
+      TenVatTu: "",
+      SoLuong: "",
+      DonGia: "",
+      TonKhoHienTai: 0,
+      NgayHetHan: "",
+    }); // Reset thông tin vật tư hiện tại
+    setNguoiYeuCau(""); // Reset người yêu cầu
+    setPhoneNguoiYeuCau(""); // Reset số điện thoại người yêu cầu
+    setIDNguoiDung(""); // Reset ID người dùng
+    setTenNguoiDung(""); // Reset tên người dùng
+  };
 
   return (
     <div>
@@ -162,161 +177,212 @@ const XuatKho = () => {
         <AddCircleOutlineIcon style={{ marginRight: "5px" }} />
         Thêm xuất kho
       </Button>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        fullWidth
-        maxWidth="md"
-      >
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg">
         <DialogTitle>Thêm Xuất Kho</DialogTitle>
         <DialogContent>
-          <form onSubmit={handleSubmit}>
-            {/* người yêu cầu */}
-            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-              <label style={{ marginBottom: "5px" }}>Người Yêu Cầu:</label>
-              <input
-                type="text"
-                value={NguoiYeuCau}
-                onChange={(e) => setNguoiYeuCau(e.target.value)}
-                required
-                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
-              />
-            </div>
-            {/* phone người yêu cầu */}
-            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-              <label style={{ marginBottom: "5px" }}>Số Điện Thoại Người Yêu Cầu:</label>
-              <input
-                type="tel"
-                value={PhoneNguoiYeuCau}
-                onChange={(e) => setPhoneNguoiYeuCau(e.target.value)}
-                required
-                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
-              />
-            </div>
-            {/* ID Người Dùng */}
-            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-              <label style={{ marginBottom: "5px" }}>ID Người Dùng:</label>
-              <select
-                value={IDNguoiDung}
-                disabled
-                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
-              >
-                <option value="">ID Người Dùng Tự Động</option>
-                {nguoiDungList.map((nd) => (
-                  <option key={nd.idnguoidung} value={nd.idnguoidung}>
-                    {nd.idnguoidung}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tên Người Dùng */}
-            <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-              <label style={{ marginBottom: "5px" }}>Tên Người Dùng:</label>
-              <select
-                value={TenNguoiDung}
-                onChange={(e) => handleNguoiDungChange("TenNguoiDung", e.target.value)}
-                required
-                style={{ padding: "5px", width: "50%", marginRight: "10px" }}
-              >
-                <option value="">Chọn Tên Người Dùng</option>
-                {nguoiDungList.map((nd) => (
-                  <option key={nd.idnguoidung} value={nd.tendangnhap}>
-                    {nd.tendangnhap}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Nhóm Vật Tư */}
-            {vatTuGroups.map((group, index) => (
-              <div key={index} style={{ marginBottom: "20px" }}>
-                {/* ID Vật Tư */}
-                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-                  <label style={{ marginBottom: "5px" }}>ID Vật Tư:</label>
-                  <select
-                    value={group.IDVatTu}
-                    disabled
-                    style={{ padding: "5px", width: "50%", marginRight: "10px" }}
-                  >
-                    <option value=""> ID Vật Tư Tự Động</option>
-                    {vatTuList.map((vt) => (
-                      <option key={vt.idvattu} value={vt.idvattu}>
-                        {vt.idvattu}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Tên Vật Tư */}
-                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-                  <label style={{ marginBottom: "5px" }}>Tên Vật Tư:</label>
-                  <select
-                    value={group.TenVatTu}
-                    onChange={(e) => handleVatTuChange(index, "TenVatTu", e.target.value)}
+          <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
+            <Grid container spacing={2}>
+              {/* Bên trái */}
+              <Grid item xs={6}>
+                <Box sx={{ marginBottom: 2 }}>
+                  <TextField
+                    label="Người Yêu Cầu"
+                    fullWidth
+                    value={NguoiYeuCau}
+                    onChange={(e) => setNguoiYeuCau(e.target.value)}
                     required
-                    style={{ padding: "5px", width: "50%", marginRight: "10px" }}
-                  >
-                    <option value="">Chọn Tên Vật Tư</option>
-                    {vatTuList.map((vt) => (
-                      <option key={vt.idvattu} value={vt.tenvattu}>
-                        {vt.tenvattu}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* Đơn giá */}
-                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-                  <label style={{ marginBottom: "5px" }}>Đơn Giá:</label>
-                  <input
-                    type="text"
-                    value={group.DonGia || "chưa có"}
-                    disabled
-                    style={{ padding: "5px", width: "50%", marginRight: "10px" }}
+                    sx={{ width: "500px" }} // Đặt chiều rộng cụ thể
                   />
-                </div>
-
-                {/* Số Lượng */}
-                <div style={{ display: "flex", flexDirection: "column", marginBottom: "10px" }}>
-                  <label style={{ marginBottom: "5px" }}>Số Lượng:</label>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <input
-                      type="number"
-                      value={group.SoLuong}
-                      onChange={(e) => handleVatTuChange(index, "SoLuong", e.target.value)}
-                      required
-                      style={{ padding: "5px", width: "80px", marginRight: "10px" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveVatTuGroup(index)}
-                      style={{ marginLeft: "10px" }}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                  {/* Dòng thông tin phụ */}
-                  <div style={{ fontSize: "12px", color: "gray", marginTop: "5px" }}>
-                    {group.IDVatTu && group.TonKho !== null && (
-                      <span style={{ fontWeight: "bold" }}>
-                        Tồn kho: {group.TonKho}
-                        {group.TonKho != null &&
-                          Number(group.SoLuong) > Number(group.TonKho) && (
-                            <span style={{ color: "red", marginLeft: "8px" }}>
-                              * Vượt quá tồn kho
-                            </span>
-                          )}
-                      </span>
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <TextField
+                    label="Số Điện Thoại Người Yêu Cầu"
+                    fullWidth
+                    value={PhoneNguoiYeuCau}
+                    onChange={(e) => setPhoneNguoiYeuCau(e.target.value)}
+                    sx={{ width: "500px" }} // Đặt chiều rộng cụ thể
+                  />
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <Autocomplete
+                    options={nguoiDungList}
+                    getOptionLabel={(option) => option.idnguoidung.toString()}
+                    value={
+                      nguoiDungList.find(
+                        (nd) => nd.idnguoidung === parseInt(IDNguoiDung)
+                      ) || null
+                    }
+                    onChange={(e, newValue) => {
+                      setIDNguoiDung(newValue ? newValue.idnguoidung : "");
+                      setTenNguoiDung(newValue ? newValue.tendangnhap : "");
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="ID Người Dùng" required />
                     )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                    fullWidth
+                    sx={{ width: "500px" }} // Đặt chiều rộng cụ thể
+                  />
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <Autocomplete
+                    options={nguoiDungList}
+                    getOptionLabel={(option) => option.tendangnhap}
+                    value={
+                      nguoiDungList.find(
+                        (nd) => nd.tendangnhap === TenNguoiDung
+                      ) || null
+                    }
+                    onChange={(e, newValue) => {
+                      setTenNguoiDung(newValue ? newValue.tendangnhap : "");
+                      setIDNguoiDung(newValue ? newValue.idnguoidung : "");
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Tên Người Dùng" required />
+                    )}
+                    fullWidth
+                    sx={{ width: "500px" }} // Đặt chiều rộng cụ thể
+                  />
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <Autocomplete
+                     options={vatTuList.filter(
+                  (vt) =>
+                    vt.tonkhohientai > 0 &&
+                    new Date(vt.ngayhethan) > new Date() // Lọc vật tư còn tồn kho và chưa hết hạn
+                )}
+                    getOptionLabel={(option) => option.idvattu.toString()}
+                    value={
+                      vatTuList.find(
+                        (vt) => vt.idvattu === parseInt(currentVatTu.IDVatTu)
+                      ) || null
+                    }
+                    onChange={(e, newValue) => {
+                      if (newValue) {
+                    setCurrentVatTu({
+                      ...currentVatTu,
+                      IDVatTu: newValue.idvattu,
+                      TenVatTu: newValue.tenvattu,
+                      DonGia: newValue.dongia,
+                      TonKhoHienTai: newValue.tonkhohientai,
+                      NgayHetHan: newValue.ngayhethan,
+                    });
+                  }
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="ID Vật Tư" />
+                    )}
+                    fullWidth
+                    sx={{ width: "500px" }} // Đặt chiều rộng cụ thể
+                  />
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <Autocomplete
+                    options={vatTuList.filter(
+                  (vt) =>
+                    vt.tonkhohientai > 0 &&
+                    new Date(vt.ngayhethan) > new Date() // Lọc vật tư còn tồn kho và chưa hết hạn
+                )}
+                    getOptionLabel={(option) => option.tenvattu}
+                    value={
+                      vatTuList.find(
+                        (vt) => vt.tenvattu === currentVatTu.TenVatTu
+                      ) || null
+                    }
+                    onChange={(e, newValue) => {
+                       if (newValue) {
+                    setCurrentVatTu({
+                      ...currentVatTu,
+                      IDVatTu: newValue.idvattu,
+                      TenVatTu: newValue.tenvattu,
+                      DonGia: newValue.dongia,
+                      TonKhoHienTai: newValue.tonkhohientai,
+                      NgayHetHan: newValue.ngayhethan,
+                    });
+                  }
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Tên Vật Tư" />
+                    )}
+                    fullWidth
+                    sx={{ width: "500px" }}
+                  />
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <TextField
+                    label="Số Lượng"
+                    type="number"
+                    fullWidth
+                    value={currentVatTu.SoLuong}
+                    onChange={(e) =>
+                      setCurrentVatTu({
+                        ...currentVatTu,
+                        SoLuong: e.target.value,
+                      })
+                    }
+                    sx={{ width: "500px" }} // Đặt chiều rộng cụ thể
+                  />
+                </Box>
+                <Box sx={{ marginBottom: 2 }}>
+                  <TextField
+                    label="Đơn Giá"
+                    value={currentVatTu.DonGia || ""} // Hiển thị Đơn Giá
+                    disabled
+                    fullWidth
+                    sx={{ width: "500px" }}
+                  />
+                </Box>
+                 {/* Hiển thị dòng chữ nhỏ */}
+              <p style={{ color: isDisabled() ? "red" : "green", marginTop: "10px" }}>
+                {currentVatTu.TonKhoHienTai === 0
+                  ? "Còn lại: 0"
+                  : new Date(currentVatTu.NgayHetHan) <= new Date()
+                  ? "Hết hạn"
+                  : `Còn lại: ${currentVatTu.TonKhoHienTai}`}
+              </p>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddVatTu}
+              >
+                Thêm Vật Tư
+              </Button>
+              </Grid>
 
-            <button type="button" onClick={handleAddVatTuGroup}>
-              Thêm Vật Tư
-            </button>
-
+              {/* Bên phải: Danh sách vật tư đã thêm */}
+              <Grid item xs={6} style={{ marginLeft: "30px" }}>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>ID Vật Tư</TableCell>
+                        <TableCell>Tên Vật Tư</TableCell>
+                        <TableCell>Số Lượng</TableCell>
+                        <TableCell>Đơn Giá</TableCell>
+                        <TableCell>Hành Động</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {vatTuGroups.map((group, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{group.IDVatTu}</TableCell>
+                          <TableCell>{group.TenVatTu}</TableCell>
+                          <TableCell>{group.SoLuong}</TableCell>
+                          <TableCell>{group.DonGia}</TableCell>
+                          <TableCell>
+                            <Button
+                              color="secondary"
+                              onClick={() => handleRemoveVatTu(index)}
+                            >
+                              Xóa
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            </Grid>
             <Box
               sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}
             >
@@ -327,6 +393,14 @@ const XuatKho = () => {
                 Xuất
               </Button>
             </Box>
+            {/* Hiển thị thông báo lỗi bên trong form */}
+            {error && (
+              <p
+                style={{ color: "red", marginTop: "10px", textAlign: "center" }}
+              >
+                {error}
+              </p>
+            )}
           </form>
         </DialogContent>
       </Dialog>
