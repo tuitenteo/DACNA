@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  password: "kyanh",
-  // password: "123123",
+  //password: "kyanh",
+   password: "123123",
   port: 5432,
 });
 
@@ -1205,6 +1205,103 @@ app.get("/api/tonkho/:idvattu/nhap", verifyToken, async (req, res) => {
   }
 });
 
+// xem danh sách thanh toán của các lô hàng
+app.get("/api/thanh-toan", verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                lh.idlohang,
+                lh.tongtien,
+                COALESCE(SUM(tt.sotienthanhtoan), 0) AS sotienthanhtoan,
+                (lh.tongtien - COALESCE(SUM(tt.sotienthanhtoan), 0)) AS congno
+            FROM lohang lh
+            LEFT JOIN banglsthanhtoan tt ON lh.idlohang = tt.idlohang
+            GROUP BY lh.idlohang, lh.tongtien
+        `);
+
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error("Lỗi khi lấy danh sách thanh toán:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi lấy danh sách thanh toán." });
+    }
+});
+
+// thanh toán cho lô hàng
+app.post("/api/thanh-toan", verifyToken, async (req, res) => {
+    const { idlohang, sotienthanhtoan, mota } = req.body;
+
+    if (!idlohang || !sotienthanhtoan || sotienthanhtoan <= 0) {
+        return res.status(400).json({ message: "Thông tin thanh toán không hợp lệ." });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN"); // Bắt đầu transaction
+
+        // Kiểm tra lô hàng tồn tại
+        const loHangResult = await client.query(
+            `SELECT tongtien FROM lohang WHERE idlohang = $1`,
+            [idlohang]
+        );
+
+        if (loHangResult.rows.length === 0) {
+            throw new Error("Lô hàng không tồn tại.");
+        }
+
+        const tongTien = loHangResult.rows[0].tongtien;
+
+        // Tính tổng số tiền đã thanh toán
+        const thanhToanResult = await client.query(
+            `SELECT COALESCE(SUM(sotienthanhtoan), 0) AS tongthanhtoan
+             FROM banglsthanhtoan WHERE idlohang = $1`,
+            [idlohang]
+        );
+
+        const tongThanhToan = thanhToanResult.rows[0].tongthanhtoan;
+
+        // Kiểm tra nếu số tiền thanh toán vượt quá tổng tiền
+        if (tongThanhToan + sotienthanhtoan > tongTien) {
+            throw new Error("Số tiền thanh toán vượt quá tổng tiền của lô hàng.");
+        }
+
+        // Thêm thông tin thanh toán
+        await client.query(
+            `INSERT INTO banglsthanhtoan (idlohang, sotienthanhtoan, mota, ngaythanhtoan)
+             VALUES ($1, $2, $3, CURRENT_DATE)`,
+            [idlohang, sotienthanhtoan, mota]
+        );
+
+        await client.query("COMMIT"); // Commit transaction
+        res.status(201).json({ message: "Thanh toán thành công." });
+    } catch (err) {
+        await client.query("ROLLBACK"); // Rollback nếu có lỗi
+        console.error("Lỗi khi thanh toán:", err);
+        res.status(500).json({ message: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// xem lịch sử thanh toán
+app.get("/api/lich-su-thanh-toan", verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                tt.idthanhtoan,
+                tt.idlohang,
+                tt.sotienthanhtoan,
+                tt.mota,
+                tt.ngaythanhtoan
+            FROM banglsthanhtoan tt
+            ORDER BY tt.ngaythanhtoan DESC
+        `);
+
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error("Lỗi khi lấy lịch sử thanh toán:", err);
+        res.status(500).json({ message: "Có lỗi xảy ra khi lấy lịch sử thanh toán." });
+    }
+});
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
