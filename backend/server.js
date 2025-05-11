@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  //password: "kyanh",
-   password: "123123",
+  password: "kyanh",
+  //  password: "123123",
   port: 5432,
 });
 
@@ -453,6 +453,7 @@ app.post("/xuatkho", verifyToken, async (req, res) => {
     }
 
     // Lấy thông tin chi tiết
+    // Xóa dấu phẩy , thừa trước from
     const result = await client.query(
       `SELECT 
         XK.IDXuatKho, 
@@ -462,7 +463,7 @@ app.post("/xuatkho", verifyToken, async (req, res) => {
         CT.NguoiYeuCau, 
         CT.PhoneNguoiYeuCau, 
         CT.IDNguoiDung, 
-        ND.TenDangNhap AS TenNguoiDung,
+        ND.TenDangNhap AS TenNguoiDung  
        FROM XuatKho XK
        JOIN ChiTietXuatKho CT ON XK.IDXuatKho = CT.IDXuatKho
        JOIN VatTu VT ON CT.IDVatTu = VT.IDVatTu
@@ -584,15 +585,31 @@ app.get("/api/nhacungcap", verifyToken, async (req, res) => {
 });
 
 app.get("/api/thongke-nhapxuat", verifyToken, async (req, res) => {
+  const { nam, thang } = req.query;
+
   try {
-    const result = await pool.query(`
-      SELECT thang, 
+    let query = `
+      SELECT nam,thang, 
              SUM(tong_nhap) AS tong_nhap, 
              SUM(tong_xuat) AS tong_xuat
       FROM view_thongke_nhapxuat
-      GROUP BY thang
-      ORDER BY thang;
-    `);
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (nam) {
+      query += " AND nam = $1";
+      params.push(nam);
+    }
+
+    if (thang) {
+      query += " AND thang = $2";
+      params.push(thang);
+    }
+
+    query += " GROUP BY nam, thang ORDER BY nam, thang"; // Thêm "nam" vào GROUP BY
+
+    const result = await pool.query(query, params);
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Lỗi khi lấy thống kê nhập xuất:", error);

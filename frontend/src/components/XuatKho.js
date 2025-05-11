@@ -26,14 +26,14 @@ const XuatKho = () => {
   const [PhoneNguoiYeuCau, setPhoneNguoiYeuCau] = useState("");
   const [IDNguoiDung, setIDNguoiDung] = useState("");
   const [TenNguoiDung, setTenNguoiDung] = useState("");
-  const [vatTuGroups, setVatTuGroups] = useState([]);
-  const [currentVatTu, setCurrentVatTu] = useState({
+  const [vatTuGroups, setVatTuGroups] = useState([]); 
+  const [currentVatTu, setCurrentVatTu] = useState({ 
     IDVatTu: "",
     TenVatTu: "",
     SoLuong: "",
     DonGia: "",
   });
-  const [vatTuList, setVatTuList] = useState([]);
+  const [vatTuList, setVatTuList] = useState([]); 
   const [nguoiDungList, setNguoiDungList] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -65,6 +65,7 @@ const XuatKho = () => {
     fetchData();
   }, []);
 
+  // Hàm xử lý gửi form
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -99,7 +100,7 @@ const XuatKho = () => {
       console.log("Xuất kho: ", token);
 
       if (response.data.success) {
-        setMessage(response.data.message);
+        setMessage(response.data.message); 
         setPhieuXuatKho(response.data.data);
         setVatTuGroups([]); // Xóa danh sách vật tư sau khi xuất kho thành công
         setNguoiYeuCau("");
@@ -115,6 +116,7 @@ const XuatKho = () => {
     }
   };
 
+  // Hàm thêm vật tư
   const handleAddVatTu = () => {
     if (
       currentVatTu.IDVatTu &&
@@ -132,24 +134,21 @@ const XuatKho = () => {
         NgayHetHan: "",
       });
       setError(""); // Xóa lỗi nếu thêm thành công
-    } else {
-      alert("Vui lòng nhập đầy đủ thông tin vật tư!");
+    } else  {
+        setError("Vui lòng nhập đầy đủ thông tin vật tư!");
     }
   };
 
-   const isDisabled = () => {
-    const { TonKhoHienTai, NgayHetHan } = currentVatTu;
-    return TonKhoHienTai === 0 || new Date(NgayHetHan) <= new Date();
-  };
-
+  // Hàm xóa vật tư
   const handleRemoveVatTu = (index) => {
     const updatedGroups = vatTuGroups.filter((_, i) => i !== index);
     setVatTuGroups(updatedGroups);
   };
 
+  // Hàm mở form
   const handleOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
+  const handleClose = () => {  // Hàm đóng form
+    setOpen(false); 
     setError(""); // Xóa lỗi khi đóng form
     setCurrentVatTu({
       IDVatTu: "",
@@ -245,11 +244,11 @@ const XuatKho = () => {
                 </Box>
                 <Box sx={{ marginBottom: 2 }}>
                   <Autocomplete
-                     options={vatTuList.filter(
-                  (vt) =>
-                    vt.tonkhohientai > 0 &&
-                    new Date(vt.ngayhethan) > new Date() // Lọc vật tư còn tồn kho và chưa hết hạn
-                )}
+                    options={vatTuList.filter(
+                      (vt) =>
+                        vt.tonkhohientai > 0 &&
+                        new Date(vt.ngayhethan) > new Date() // Lọc vật tư còn tồn kho và chưa hết hạn
+                    )}
                     getOptionLabel={(option) => option.idvattu.toString()}
                     value={
                       vatTuList.find(
@@ -258,15 +257,15 @@ const XuatKho = () => {
                     }
                     onChange={(e, newValue) => {
                       if (newValue) {
-                    setCurrentVatTu({
-                      ...currentVatTu,
-                      IDVatTu: newValue.idvattu,
-                      TenVatTu: newValue.tenvattu,
-                      DonGia: newValue.dongia,
-                      TonKhoHienTai: newValue.tonkhohientai,
-                      NgayHetHan: newValue.ngayhethan,
-                    });
-                  }
+                        setCurrentVatTu({
+                          ...currentVatTu,
+                          IDVatTu: newValue ? newValue.idvattu : "",
+                          TenVatTu: newValue ? newValue.tenvattu : "", // Xóa Tên nếu ID bị xóa
+                          DonGia: newValue ? newValue.dongia : "",
+                          TonKhoHienTai: newValue ? newValue.tonkhohientai : 0,
+                          NgayHetHan: newValue ? newValue.ngayhethan : "",
+                        });
+                      }
                     }}
                     renderInput={(params) => (
                       <TextField {...params} label="ID Vật Tư" />
@@ -278,10 +277,10 @@ const XuatKho = () => {
                 <Box sx={{ marginBottom: 2 }}>
                   <Autocomplete
                     options={vatTuList.filter(
-                  (vt) =>
-                    vt.tonkhohientai > 0 &&
-                    new Date(vt.ngayhethan) > new Date() // Lọc vật tư còn tồn kho và chưa hết hạn
-                )}
+                      (vt) =>
+                        vt.tonkhohientai > 0 &&
+                        new Date(vt.ngayhethan) > new Date() // Lọc vật tư còn tồn kho và chưa hết hạn
+                    )}
                     getOptionLabel={(option) => option.tenvattu}
                     value={
                       vatTuList.find(
@@ -289,16 +288,16 @@ const XuatKho = () => {
                       ) || null
                     }
                     onChange={(e, newValue) => {
-                       if (newValue) {
-                    setCurrentVatTu({
-                      ...currentVatTu,
-                      IDVatTu: newValue.idvattu,
-                      TenVatTu: newValue.tenvattu,
-                      DonGia: newValue.dongia,
-                      TonKhoHienTai: newValue.tonkhohientai,
-                      NgayHetHan: newValue.ngayhethan,
-                    });
-                  }
+                      if (newValue) {
+                        setCurrentVatTu({
+                          ...currentVatTu,
+                          IDVatTu: newValue ? newValue.idvattu : "", // Xóa ID nếu Tên bị xóa
+                          TenVatTu: newValue ? newValue.tenvattu : "",
+                          DonGia: newValue ? newValue.dongia : "",
+                          TonKhoHienTai: newValue ? newValue.tonkhohientai : 0,
+                          NgayHetHan: newValue ? newValue.ngayhethan : "",
+                        });
+                      }
                     }}
                     renderInput={(params) => (
                       <TextField {...params} label="Tên Vật Tư" />
@@ -331,21 +330,33 @@ const XuatKho = () => {
                     sx={{ width: "500px" }}
                   />
                 </Box>
-                 {/* Hiển thị dòng chữ nhỏ */}
-              <p style={{ color: isDisabled() ? "red" : "green", marginTop: "10px" }}>
-                {currentVatTu.TonKhoHienTai === 0
-                  ? "Còn lại: 0"
-                  : new Date(currentVatTu.NgayHetHan) <= new Date()
-                  ? "Hết hạn"
-                  : `Còn lại: ${currentVatTu.TonKhoHienTai}`}
-              </p>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleAddVatTu}
-              >
-                Thêm Vật Tư
-              </Button>
+                {/* Hiển thị dòng chữ nhỏ */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center", // Căn giữa theo chiều dọc
+                    marginTop: "10px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: currentVatTu.TonKhoHienTai ? "green" : "grey",
+                      margin: 0,
+                    }}
+                  >
+                    {currentVatTu.TonKhoHienTai
+                      ? `Còn lại: ${currentVatTu.TonKhoHienTai}`
+                      : "Còn lại: không xác định"}
+                  </p>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleAddVatTu}
+                  >
+                    Thêm Vật Tư
+                  </Button>
+                </Box>
               </Grid>
 
               {/* Bên phải: Danh sách vật tư đã thêm */}
@@ -389,23 +400,30 @@ const XuatKho = () => {
               <Button variant="outlined" onClick={handleClose}>
                 Hủy
               </Button>
+
+              {/* Hiển thị thông báo lỗi bên trong form */}
+              {error && (
+                <p
+                  style={{
+                    color: "red",
+                    marginTop: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  {error}
+                </p>
+              )}
+
               <Button type="submit" variant="contained" color="primary">
                 Xuất
               </Button>
             </Box>
-            {/* Hiển thị thông báo lỗi bên trong form */}
-            {error && (
-              <p
-                style={{ color: "red", marginTop: "10px", textAlign: "center" }}
-              >
-                {error}
-              </p>
-            )}
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Hiển thị thông báo thành công bên ngoài form và phiếu xuất kho*/}
       {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
       {phieuXuatKho && <XuatKhoPdf phieuXuatKho={phieuXuatKho} />}
 
       {/* Hiển thị danh sách xuất kho */}
