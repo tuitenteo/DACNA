@@ -75,87 +75,101 @@ const CaiDat = () => {
     };
 
     return (
-        <Box sx={{ padding: '20px', maxWidth: 600, margin: 'auto' }}>
-            <Card sx={{ padding: '20px', boxShadow: 3 }}>
-                <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', color: 'primary.main' }}>
-                    Cài đặt
-                </Typography>
+      <Box sx={{ padding: "20px", maxWidth: 600, margin: "auto" }}>
+        <Card sx={{ padding: "20px", boxShadow: 3 }}>
+          <Typography
+            variant="h5"
+            gutterBottom
+            sx={{ textAlign: "center", color: "primary.main" }}
+          >
+            Cài đặt
+          </Typography>
 
-                <Box sx={{ marginBottom: '20px' }}>
-                    <Typography variant="body1" sx={{ marginRight: '10px', display: 'inline-block' }}>
-                        Chế độ: {mode === 'light' ? 'Sáng' : 'Tối'}
-                    </Typography>
-                    <Switch
-                        checked={mode === 'dark'}
-                        onChange={toggleTheme} // Gọi hàm toggleTheme khi người dùng thay đổi
-                    />
-                </Box>
+          <Box sx={{ marginBottom: "20px" }}>
+            <Typography
+              variant="body1"
+              sx={{ marginRight: "10px", display: "inline-block" }}
+            >
+              Chế độ: {mode === "light" ? "Sáng" : "Tối"}
+            </Typography>
+            <Switch
+              checked={mode === "dark"}
+              onChange={toggleTheme} // Gọi hàm toggleTheme khi người dùng thay đổi
+            />
+          </Box>
 
-                <Grid container spacing={2} justifyContent="center">
-                    <Grid>
-                        <Button 
-                            variant="contained" 
-                            color="primary" 
-                            onClick={handleLogout}
-                            sx={{ width: '200px' }} // Chiều rộng nút
-                        >
-                            Đăng xuất
-                        </Button>
-                    </Grid>
-                    <Grid>
-                        {/* Chỉ hiển thị khi userRole là Admin */}
-                        {userRole === "Admin" && (
-                            <Button
-                                variant="outlined"
-                                color="secondary"
-                                onClick={handleBackup}
-                                sx={{ width: '200px' }} // Chiều rộng nút
-                            >
-                                Sao lưu dữ liệu
-                            </Button>
-                        )}
-                    </Grid>
-                </Grid>
+          <Grid container spacing={2} justifyContent="center">
+            <Grid>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleLogout}
+                sx={{ width: "200px" }} // Chiều rộng nút
+              >
+                Đăng xuất
+              </Button>
+            </Grid>
+            <Grid>
+              {/* Chỉ hiển thị khi userRole là Admin */}
+              {userRole === "Admin" && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleBackup}
+                  sx={{ width: "200px" }} // Chiều rộng nút
+                >
+                  Sao lưu dữ liệu
+                </Button>
+              )}
+            </Grid>
+          </Grid>
 
-                <Box sx={{ marginTop: '20px' }}>
-                    <Typography variant="h6" gutterBottom>
-                        Đổi mật khẩu
-                    </Typography>
-                    <TextField
-                        label="Mật khẩu cũ"
-                        type="password"
-                        fullWidth
-                        value={matkhauCu}
-                        onChange={(e) => setMatkhauCu(e.target.value)}
-                        sx={{ marginBottom: '10px' }}
-                    />
-                    <TextField
-                        label="Mật khẩu mới"
-                        type="password"
-                        fullWidth
-                        value={matkhauMoi}
-                        onChange={(e) => setMatkhauMoi(e.target.value)}
-                        sx={{ marginBottom: '10px' }}
-                    />
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleChangePassword}
-                        fullWidth
-                    >
-                        Đổi mật khẩu
-                    </Button>
-                    {thongbao && (
-                        <Typography
-                            variant="body2"
-                            sx={{ color: 'red', marginTop: '10px', textAlign: 'center' }}
-                        >
-                            {thongbao}
-                        </Typography>
-                    )}
-                </Box>
-            </Card>
-        </Box>
+          <Box sx={{ marginTop: "20px" }}>
+            <Typography variant="h6" gutterBottom>
+              Đổi mật khẩu
+            </Typography>
+            <form // Dùn form để chặn Cảnh báo "Password field is not contained in a form"
+              onSubmit={(e) => {
+                e.preventDefault(); // Ngăn chặn hành vi mặc định của form
+                handleChangePassword(); // Gọi hàm đổi mật khẩu
+              }}
+            >
+              <TextField
+                label="Mật khẩu cũ"
+                type="password"
+                fullWidth
+                value={matkhauCu}
+                onChange={(e) => setMatkhauCu(e.target.value)}
+                sx={{ marginBottom: "10px" }}
+              />
+              <TextField
+                label="Mật khẩu mới"
+                type="password"
+                fullWidth
+                value={matkhauMoi}
+                onChange={(e) => setMatkhauMoi(e.target.value)}
+                sx={{ marginBottom: "10px" }}
+              />
+              <Button
+                type="submit" // Đặt type là "submit" để form xử lý sự kiện onSubmit
+                variant="contained"
+                color="primary"
+                fullWidth
+              >
+                Đổi mật khẩu
+              </Button>
+            </form>
+            {thongbao && (
+              <Typography
+                variant="body2"
+                sx={{ color: "red", marginTop: "10px", textAlign: "center" }}
+              >
+                {thongbao}
+              </Typography>
+            )}
+          </Box>
+        </Card>
+      </Box>
     );
 };
 

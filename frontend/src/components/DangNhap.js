@@ -25,7 +25,7 @@ const DangNhap = () => {
       localStorage.setItem("tendangnhap", response.data.user.tendangnhap);
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("userRole", response.data.user.vaitro);
-
+      localStorage.setItem("userId", response.data.user.idnguoidung);
       //console.log("JWT Token:", response.data.token);
       //console.log("Vai trò người dùng:", response.data.user.vaitro);
 
