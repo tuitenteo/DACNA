@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
     Box,
@@ -20,6 +21,7 @@ const LoHang = () => {
     const [loHangList, setLoHangList] = useState([]);
     const [chiTietLoHang, setChiTietLoHang] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchLoHang();
@@ -157,6 +159,14 @@ const LoHang = () => {
                                     sx={{ marginLeft: "10px" }}
                                 >
                                     Xóa
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() => navigate(`/dashboard/thanh-toan`)} // Chuyển hướng đến trang Thanh Toán
+                                    sx={{ marginLeft: "10px" }}
+                                >
+                                    Thanh Toán
                                 </Button>
                             </TableCell>
                         </TableRow>

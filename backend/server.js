@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  password: "kyanh",
-  //  password: "123123",
+  //password: "kyanh",
+    password: "123123",
   port: 5432,
 });
 
@@ -741,31 +741,25 @@ app.get("/api/xuatkho", verifyToken, async (req, res) => {
 
 // tìm nhà cung cấp theo các sản phẩm (vật tư) 
 app.get('/api/nhacungcap/vattu/:idvattu', verifyToken, async (req, res) => {
-  const { idvattu } = req.params;
-  try {
-    const result = await pool.query(`
-      SELECT 
-        ncc.idncc,
-        ncc.TenNCC,
-        ncc.SoDienThoai,
-        ncc.Email,
-        ncc.DiaChi,
-        ncc.STK,
-        ncc.MST,
-        ncc.website,
-        vt.idvattu,
-        vt.TenVatTu
-      FROM NhaCungCap ncc
-      LEFT JOIN Vattu_NhaCungCap vtncc ON ncc.idncc = vtncc.idncc
-      LEFT JOIN Vattu vt ON vtncc.idvattu = vt.idvattu
-      WHERE vtncc.idvattu = $1
-    `, [idvattu]);
+    const { idvattu } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT 
+                ncc.idncc,
+                ncc.tenncc,
+                ncc.email,
+                ncc.sodienthoai,
+                ncc.diachi
+            FROM nhacungcap ncc
+            JOIN vattu_nhacungcap vtncc ON ncc.idncc = vtncc.idncc
+            WHERE vtncc.idvattu = $1
+        `, [idvattu]);
 
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Lỗi truy vấn nhà cung cấp:", error);
-    res.status(500).json({ error: 'Lỗi truy vấn nhà cung cấp', chiTiet: error.message });
-  }
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách nhà cung cấp theo vật tư:", error);
+        res.status(500).json({ message: "Có lỗi xảy ra khi lấy danh sách nhà cung cấp." });
+    }
 });
 
 app.get('/api/backup', verifyToken, async (req, res) => {
@@ -1265,7 +1259,7 @@ app.post("/api/thanh-toan", verifyToken, async (req, res) => {
             throw new Error("Lô hàng không tồn tại.");
         }
 
-        const tongTien = loHangResult.rows[0].tongtien;
+        const tongTien = parseFloat(loHangResult.rows[0].tongtien); // Chuyển đổi sang số
 
         // Tính tổng số tiền đã thanh toán
         const thanhToanResult = await client.query(
@@ -1274,18 +1268,20 @@ app.post("/api/thanh-toan", verifyToken, async (req, res) => {
             [idlohang]
         );
 
-        const tongThanhToan = thanhToanResult.rows[0].tongthanhtoan;
+        const tongThanhToan = parseFloat(thanhToanResult.rows[0].tongthanhtoan); // Chuyển đổi sang số
 
         // Kiểm tra nếu số tiền thanh toán vượt quá tổng tiền
-        if (tongThanhToan + sotienthanhtoan > tongTien) {
-            throw new Error("Số tiền thanh toán vượt quá tổng tiền của lô hàng.");
+        const soTienThanhToanMoi = parseFloat(sotienthanhtoan); // Chuyển đổi sang số
+        if (tongThanhToan + soTienThanhToanMoi > tongTien) {
+            console.error(`Lỗi: Tổng thanh toán (${tongThanhToan + soTienThanhToanMoi}) vượt quá tổng tiền (${tongTien}).`);
+            throw new Error(`Lỗi: Tổng thanh toán (${tongThanhToan + soTienThanhToanMoi}) vượt quá tổng tiền (${tongTien}).`);
         }
 
         // Thêm thông tin thanh toán
         await client.query(
             `INSERT INTO banglsthanhtoan (idlohang, sotienthanhtoan, mota, ngaythanhtoan)
              VALUES ($1, $2, $3, CURRENT_DATE)`,
-            [idlohang, sotienthanhtoan, mota]
+            [idlohang, soTienThanhToanMoi, mota]
         );
 
         await client.query("COMMIT"); // Commit transaction

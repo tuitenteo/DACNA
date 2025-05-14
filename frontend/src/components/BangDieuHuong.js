@@ -412,6 +412,7 @@ const BangDieuHuong = () => {
               <Route path="lohang" element={<LoHang />} />
               <Route path="them-lo-hang" element={<ThemLoHang />} />
               <Route path="thanh-toan" element={<ThanhToan />} />
+              <Route path="/dashboard/thanh-toan/:idlohang" element={<ThanhToan />} />
               <Route path="lich-su-thanh-toan" element={<LichSuThanhToan />} />
             </Routes>
           </Suspense>
