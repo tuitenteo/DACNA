@@ -15,12 +15,17 @@ import {
     DialogActions,
     Select,
     MenuItem,
+    TablePagination,
 } from "@mui/material";
 
 const LoHang = () => {
     const [loHangList, setLoHangList] = useState([]);
     const [chiTietLoHang, setChiTietLoHang] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
+    const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng hiển thị mỗi trang
+    const [currentPage, setCurrentPage] = useState(0); // Trang hiện tại
+    const [rowsPerPageDialog, setRowsPerPageDialog] = useState(10); // Số dòng hiển thị mỗi trang trong Dialog
+    const [currentPageDialog, setCurrentPageDialog] = useState(0); // Trang hiện tại trong Dialog
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -42,9 +47,12 @@ const LoHang = () => {
     const fetchChiTietLoHang = async (idlohang) => {
         try {
             const token = localStorage.getItem("token");
-            const res = await axios.get(`http://localhost:5000/api/lohang/${idlohang}/chitiet`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await axios.get(
+                `http://localhost:5000/api/lohang/${idlohang}/chitiet`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
 
             setChiTietLoHang(res.data);
             setOpenDialog(true);
@@ -109,6 +117,18 @@ const LoHang = () => {
         });
     };
 
+    // Phân trang danh sách lô hàng
+    const paginatedLoHangList = loHangList.slice(
+        currentPage * rowsPerPage,
+        currentPage * rowsPerPage + rowsPerPage
+    );
+
+    // Phân trang danh sách chi tiết lô hàng
+    const paginatedChiTietLoHang = chiTietLoHang.slice(
+        currentPageDialog * rowsPerPageDialog,
+        currentPageDialog * rowsPerPageDialog + rowsPerPageDialog
+    );
+
     return (
         <Box sx={{ padding: "20px" }}>
             <h1>Danh Sách Lô Hàng</h1>
@@ -125,12 +145,11 @@ const LoHang = () => {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {loHangList.map((loHang) => (
+                    {paginatedLoHangList.map((loHang) => (
                         <TableRow key={loHang.idlohang}>
                             <TableCell>{loHang.idlohang}</TableCell>
                             <TableCell>{loHang.tenncc}</TableCell>
                             <TableCell>{loHang.tongtien}</TableCell>
-                            {/* <TableCell>{loHang.trangthai}</TableCell> */}
                             <TableCell>
                                 <Select
                                     value={loHang.trangthai}
@@ -163,7 +182,7 @@ const LoHang = () => {
                                 <Button
                                     variant="contained"
                                     color="primary"
-                                    onClick={() => navigate(`/dashboard/thanh-toan`)} // Chuyển hướng đến trang Thanh Toán
+                                    onClick={() => navigate(`/dashboard/thanh-toan`)}
                                     sx={{ marginLeft: "10px" }}
                                 >
                                     Thanh Toán
@@ -173,6 +192,20 @@ const LoHang = () => {
                     ))}
                 </TableBody>
             </Table>
+
+            {/* Phân trang danh sách lô hàng */}
+            <TablePagination
+                component="div"
+                count={loHangList.length}
+                page={currentPage}
+                onPageChange={(e, newPage) => setCurrentPage(newPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+                labelRowsPerPage="Số dòng mỗi trang"
+                labelDisplayedRows={({ from, to, count }) =>
+                    `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
+                }
+            />
 
             {/* Dialog hiển thị chi tiết lô hàng */}
             <Dialog open={openDialog} onClose={handleCloseDialog}>
@@ -188,7 +221,7 @@ const LoHang = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {chiTietLoHang.map((chiTiet) => (
+                            {paginatedChiTietLoHang.map((chiTiet) => (
                                 <TableRow key={chiTiet.idvattu}>
                                     <TableCell>{chiTiet.idvattu}</TableCell>
                                     <TableCell>{chiTiet.tenvattu}</TableCell>
@@ -200,6 +233,18 @@ const LoHang = () => {
                     </Table>
                 </DialogContent>
                 <DialogActions>
+                    <TablePagination
+                        component="div"
+                        count={chiTietLoHang.length}
+                        page={currentPageDialog}
+                        onPageChange={(e, newPage) => setCurrentPageDialog(newPage)}
+                        rowsPerPage={rowsPerPageDialog}
+                        onRowsPerPageChange={(e) => setRowsPerPageDialog(parseInt(e.target.value, 10))}
+                        labelRowsPerPage="Số dòng mỗi trang"
+                        labelDisplayedRows={({ from, to, count }) =>
+                            `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
+                        }
+                    />
                     <Button onClick={handleCloseDialog}>Đóng</Button>
                 </DialogActions>
             </Dialog>

@@ -25,8 +25,9 @@ import {
   Settings,
   ExpandLess,
   ExpandMore,
+  MenuOpen,
+  Menu,
 } from "@mui/icons-material";
-import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import NguoiDung from "./NguoiDung";
 import CaiDat from "./CaiDat";
@@ -43,7 +44,7 @@ import BaoGia from "./BaoGia";
 import SoSanhBaoGia from "./SoSanhBaoGia";
 import LoHang from "./LoHang";
 import ThemLoHang from "./ThemLoHang";
-import ThanhToan from "./ThanhToan"; 
+import ThanhToan from "./ThanhToan";
 import LichSuThanhToan from "./LichSuThanhToan";
 import logo from "../assets/myicon.png";
 import { useTheme } from "@mui/material/styles";
@@ -56,13 +57,13 @@ const BangDieuHuong = () => {
   const drawerWidth = 240;
   const collapsedWidth = 0;
   const theme = useTheme();
-  const [showWarnings, setShowWarnings] = useState(true); // set thông báo hiện 
+  const [showWarnings, setShowWarnings] = useState(true); // set thông báo hiện
   const [warnings, setWarnings] = useState({
     soLuongIt: [],
     sapHetHan: [],
     daHetHan: [],
     hetVatTu: [],
-  });  
+  });
   const handleToggleReports = () => {
     setOpenReports(!openReports);
   };
@@ -80,7 +81,7 @@ const BangDieuHuong = () => {
       <AppBar
         position="fixed"
         sx={{
-          backgroundColor: theme.palette.background.default,
+          backgroundColor: theme.palette.background.default, // 2 dòng này dùng cho chỉnh sáng tối
           color: theme.palette.text.primary,
           //backgroundColor: "#ffffff",
           //color: "#123458",
@@ -101,9 +102,9 @@ const BangDieuHuong = () => {
             sx={{ mr: 2 }}
           >
             {drawerOpen ? (
-              <CloseIcon sx={{ color: "#123458" }} />
+              <MenuOpen sx={{ color: "#123458" }} />
             ) : (
-              <MenuIcon sx={{ color: "#123458" }} />
+              <Menu sx={{ color: "#123458" }} />
             )}
           </IconButton>
           <Box
@@ -170,7 +171,6 @@ const BangDieuHuong = () => {
             </Box>
             <List>
               <ListItem
-                
                 component={Link}
                 to="/dashboard/danhmucvattu"
                 selected={location.pathname.includes("danhmucvattu")}
@@ -184,7 +184,6 @@ const BangDieuHuong = () => {
                 />
               </ListItem>
               <ListItem
-                
                 component={Link}
                 to="/dashboard/nhacungcap"
                 selected={location.pathname.includes("nhacungcap")}
@@ -198,7 +197,6 @@ const BangDieuHuong = () => {
                 />
               </ListItem>
               <ListItem
-                
                 component={Link}
                 to="/dashboard/nhapkho"
                 selected={location.pathname.includes("nhapkho")}
@@ -212,20 +210,19 @@ const BangDieuHuong = () => {
                 />
               </ListItem>
               <ListItem
-  component={Link}
-  to="/dashboard/thanh-toan"
-  selected={location.pathname.includes("thanh-toan")}
->
-  <ListItemIcon>
-    <BarChart sx={{ color: getIconColor("thanh-toan") }} />
-  </ListItemIcon>
-  <ListItemText
-    primary="Thanh Toán"
-    sx={{ color: theme.palette.text.primary }}
-  />
-</ListItem>
+                component={Link}
+                to="/dashboard/thanh-toan"
+                selected={location.pathname.includes("thanh-toan")}
+              >
+                <ListItemIcon>
+                  <BarChart sx={{ color: getIconColor("thanh-toan") }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Thanh Toán"
+                  sx={{ color: theme.palette.text.primary }}
+                />
+              </ListItem>
               <ListItem
-                
                 component={Link}
                 to="/dashboard/xuatkho"
                 selected={location.pathname.includes("xuatkho")}
@@ -239,7 +236,6 @@ const BangDieuHuong = () => {
                 />
               </ListItem>
               <ListItem
-                
                 component={Link}
                 to="/dashboard/lichsugiaodich"
                 selected={location.pathname.includes("lichsugiaodich")}
@@ -265,7 +261,6 @@ const BangDieuHuong = () => {
               {/* Hiển thị menu "Người dùng" chỉ khi vai trò là Admin */}
               {userRole === "Admin" && (
                 <ListItem
-                  
                   component={Link}
                   to="/dashboard/nguoidung"
                   selected={location.pathname.includes("nguoidung")}
@@ -291,7 +286,6 @@ const BangDieuHuong = () => {
               <Collapse in={openReports} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   <ListItem
-                    
                     sx={{ pl: 4 }}
                     component={Link}
                     to="/dashboard/tonkho"
@@ -325,7 +319,6 @@ const BangDieuHuong = () => {
               </Collapse>
 
               <ListItem
-                
                 component={Link}
                 to="/dashboard/caidat"
                 selected={location.pathname.includes("caidat")}
@@ -352,49 +345,53 @@ const BangDieuHuong = () => {
           }}
         >
           <ThongBaoTonKho onWarningsUpdate={setWarnings} />
-           {/* hiển thị thông báo tồn kho và tắt có điều kieẹn */}
-      {showWarnings && (
-        <Box sx={{ mb: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6">Thông Báo Tồn Kho</Typography>
-            <IconButton size="small" onClick={() => setShowWarnings(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          {/* hiển thị thông báo tồn kho và tắt có điều kieẹn */}
+          {showWarnings && (
+            <Box sx={{ mb: 2 }}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="h6">Thông Báo Tồn Kho</Typography>
+                <IconButton size="small" onClick={() => setShowWarnings(false)}>
+                  <CloseIcon />
+                </IconButton>
+              </Box>
 
-          <Collapse in={showWarnings}>
-            <div>
-              {warnings.soLuongIt.length > 0 && (
-                <Alert severity="warning" sx={{ mb: 1 }}>
-                  Có {warnings.soLuongIt.length} vật tư có số lượng ít.{" "}
-                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
-                </Alert>
-              )}
+              <Collapse in={showWarnings}>
+                <div>
+                  {warnings.soLuongIt.length > 0 && (
+                    <Alert severity="warning" sx={{ mb: 1 }}>
+                      Có {warnings.soLuongIt.length} vật tư có số lượng ít.{" "}
+                      <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                    </Alert>
+                  )}
 
-              {warnings.sapHetHan.length > 0 && (
-                <Alert severity="warning" sx={{ mb: 1 }}>
-                  Có {warnings.sapHetHan.length} vật tư sắp hết hạn.{" "}
-                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
-                </Alert>
-              )}
+                  {warnings.sapHetHan.length > 0 && (
+                    <Alert severity="warning" sx={{ mb: 1 }}>
+                      Có {warnings.sapHetHan.length} vật tư sắp hết hạn.{" "}
+                      <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                    </Alert>
+                  )}
 
-              {warnings.daHetHan.length > 0 && (
-                <Alert severity="error" sx={{ mb: 1 }}>
-                  Có {warnings.daHetHan.length} vật tư đã hết hạn.{" "}
-                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
-                </Alert>
-              )}
+                  {warnings.daHetHan.length > 0 && (
+                    <Alert severity="error" sx={{ mb: 1 }}>
+                      Có {warnings.daHetHan.length} vật tư đã hết hạn.{" "}
+                      <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                    </Alert>
+                  )}
 
-              {warnings.hetVatTu.length > 0 && (
-                <Alert severity="error" sx={{ mb: 1 }}>
-                  Có {warnings.hetVatTu.length} vật tư đã hết hàng.{" "}
-                  <Link to="/dashboard/tonkho">Xem chi tiết</Link>
-                </Alert>
-              )}
-            </div>
-          </Collapse>
-        </Box>
-      )}
+                  {warnings.hetVatTu.length > 0 && (
+                    <Alert severity="error" sx={{ mb: 1 }}>
+                      Có {warnings.hetVatTu.length} vật tư đã hết hàng.{" "}
+                      <Link to="/dashboard/tonkho">Xem chi tiết</Link>
+                    </Alert>
+                  )}
+                </div>
+              </Collapse>
+            </Box>
+          )}
           <Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route path="nguoidung" element={<NguoiDung />} />
@@ -406,7 +403,7 @@ const BangDieuHuong = () => {
               <Route path="tonkho" element={<TonKho />} />
               <Route path="thongkegiaodich" element={<ThongKeGiaoDich />} />
               <Route path="nhacungcap" element={<NhaCungCap />} />
-              <Route path="thongbaotonkho" element={<ThongBaoTonKho/>} />
+              <Route path="thongbaotonkho" element={<ThongBaoTonKho />} />
               <Route path="baogia" element={<BaoGia />} />
               <Route path="so-sanh-bao-gia" element={<SoSanhBaoGia />} />
               <Route path="lohang" element={<LoHang />} />

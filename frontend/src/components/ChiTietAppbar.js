@@ -6,7 +6,6 @@ import {
   Box,
   Typography,
   Divider,
-
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import axios from "axios";
@@ -33,67 +32,61 @@ const ChiTietAppbar = () => {
           },
         });
 
-        const data = res.data;
+        const data = res.data.filter((gd) => !seenIds.includes(gd.idgiaodich)); // Loại bỏ giao dịch đã đọc
 
         // Gộp các giao dịch cùng idxuat hoặc nhập
-        const mergedData =
-          data.reduce((acc, curr) => {
-            const key = curr.idxuatkho || curr.idnhapkho; // Gộp theo idxuat kh thì idnhap
-            if (!acc[key]) {
-              acc[key] = {
-                idgiaodich: curr.idgiaodich, // lấy id đầu tiên
-                idxuatkho: curr.idxuatkho,
-                idnhapkho: curr.idnhapkho,
-                tennguoidung: curr.tennguoidung,
-                loaigiaodich: curr.loaigiaodich,
-                ngaygiaodich: curr.ngaygiaodich,
-                inventories: [],
-              };
-            }
+        const mergedData = data.reduce((acc, curr) => {
+          const key = curr.idxuatkho || curr.idnhapkho; // Gộp theo idxuat kh thì idnhap
+          if (!acc[key]) {
+            acc[key] = {
+              idgiaodich: curr.idgiaodich, // lấy id đầu tiên
+              idxuatkho: curr.idxuatkho,
+              idnhapkho: curr.idnhapkho,
+              tennguoidung: curr.tennguoidung,
+              loaigiaodich: curr.loaigiaodich,
+              ngaygiaodich: curr.ngaygiaodich,
+              inventories: [],
+            };
+          }
 
-            // Kiểm tra nếu `inventories` tồn tại và có phần tử
-            if (Array.isArray(curr.inventories) && curr.inventories.length > 0) {
-              curr.inventories.forEach((item) => {
-                // Kiểm tra xem vật tư đã tồn tại trong danh sách chưa
-                const exists = acc[key].inventories.some(
-                  (inv) => inv.tenvattu === item.tenvattu && inv.soluong === item.soluong
-                );
+          // Kiểm tra nếu `inventories` tồn tại và có phần tử
+          if (Array.isArray(curr.inventories) && curr.inventories.length > 0) {
+            curr.inventories.forEach((item) => {
+              // Kiểm tra xem vật tư đã tồn tại trong danh sách chưa
+              const exists = acc[key].inventories.some(
+                (inv) =>
+                  inv.tenvattu === item.tenvattu && inv.soluong === item.soluong
+              );
 
-                if (!exists) {
-                  acc[key].inventories.push({
-                    tenvattu: item.tenvattu || "Không xác định",
-                    soluong: item.soluong || 0,
-                  });
-                }
-              });
-            }
-            return acc;
-          }, {});
+              if (!exists) {
+                acc[key].inventories.push({
+                  tenvattu: item.tenvattu || "Không xác định",
+                  soluong: item.soluong || 0,
+                });
+              }
+            });
+          }
+          return acc;
+        }, {});
 
         const mergedArray = Object.values(mergedData);
-        // Gán trạng thái `read` dựa trên `seenIds`
+
         const processedData = mergedArray
+          .filter((gd) => !seenIds.includes(gd.idgiaodich)) // Loại bỏ giao dịch đã đọc
           .map((gd) => ({
-
             ...gd,
-            idnhapkho: gd.idnhapkho, // để giữ 2 id để render noti clear
-            idxuatkho: gd.idxuatkho,
             read: seenIds.includes(gd.idgiaodich),
-
           }))
-
           .sort((a, b) => {
-            // Ưu tiên chưa đọc lên trước
             if (a.read !== b.read) return a.read - b.read;
-            // Sắp xếp theo ngày giao dịch mới nhất
-            const dateDiff = new Date(b.ngaygiaodich) - new Date(a.ngaygiaodich);
+            const dateDiff =
+              new Date(b.ngaygiaodich) - new Date(a.ngaygiaodich);
             if (dateDiff !== 0) return dateDiff;
-
-            // Nếu ngày giao dịch giống nhau, sắp xếp theo mã phiếu xuất hoặc nhập (giảm dần)
             const idA = a.idxuatkho || a.idnhapkho || 0;
             const idB = b.idxuatkho || b.idnhapkho || 0;
-            return idB - idA; // Sắp xếp giảm dần theo mã phiếu
+            return idB - idA;
           });
+
         // Cập nhật trạng thái có thông báo mới
         setNewTransactions(processedData);
 
@@ -137,7 +130,6 @@ const ChiTietAppbar = () => {
     setAnchorEl(event.currentTarget);
   };
 
-  //mới sửa
   const handleNotificationClick = (idgiaodich) => {
     // Đánh dấu giao dịch là đã xem (đọc)
     setSeenIds((prev) => {
@@ -146,13 +138,10 @@ const ChiTietAppbar = () => {
       return updatedSeenIds;
     });
 
-    // Cập nhật trạng thái 'read' mà không thay đổi vị trí
-    setNewTransactions((prev) => {
-      // Duy trì vị trí thông báo nhưng chỉ thay đổi trạng thái read
-      return prev.map((gd) =>
-        gd.idgiaodich === idgiaodich ? { ...gd, read: true } : gd
-      );
-    });
+    // Loại bỏ giao dịch đã đọc khỏi danh sách hiển thị
+    setNewTransactions((prev) =>
+      prev.filter((gd) => gd.idgiaodich !== idgiaodich)
+    );
   };
 
   const handleClose = () => setAnchorEl(null);
@@ -186,6 +175,7 @@ const ChiTietAppbar = () => {
         )}
       </IconButton>
 
+      {/* // Menu hiển thị danh sách giao dịch mới */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
         {newTransactions.length === 0 ? (
           <MenuItem disabled>Không có giao dịch mới</MenuItem>
@@ -210,48 +200,44 @@ const ChiTietAppbar = () => {
                         : "Không xác định"}
                   </Typography>
 
-
                   <Typography variant="body2">
                     Người thực hiện: {giaoDich.tennguoidung || "Không xác định"}
                   </Typography>
                   <Typography variant="body2">
                     Ngày giao dịch:{" "}
-                    {new Date(giaoDich.ngaygiaodich).toLocaleDateString("vi-VN", {
-                    })}
+                    {new Date(giaoDich.ngaygiaodich).toLocaleDateString(
+                      "vi-VN",
+                      {}
+                    )}
                   </Typography>
-                  {/* {Array.isArray(giaoDich.inventories) && giaoDich.inventories.length > 0 ? (
+
+                  {/* // Hiển thị danh sách vật tư */}
+                  {Array.isArray(giaoDich.inventories) &&
+                  giaoDich.inventories.length > 0 ? (
                     giaoDich.inventories.map((acc, idx) => (
                       <Typography key={idx} variant="body2">
-                        <strong>Vật tư {idx + 1}:</strong> {acc.tenvattu || "Không xác định"} - SL: {acc.soluong || 0}
+                        {giaoDich.loaigiaodich === "Nhập kho" ? (
+                          <>
+                            • IDVT: {acc.idvattu} -{" "}
+                            {acc.tenvattu || "Không xác định"}
+                            {" - SL: "}
+                            {acc.soluong || 0}
+                            {" - ĐG: "}
+                            {acc.dongianhap || 0}
+                          </>
+                        ) : (
+                          <>
+                            • {acc.tenvattu || "Không xác định"} - SL:{" "}
+                            {acc.soluong || 0}
+                          </>
+                        )}
                       </Typography>
                     ))
                   ) : (
                     <Typography variant="body2" color="error">
                       Không có vật tư nào
                     </Typography>
-                  )} */}
-{Array.isArray(giaoDich.inventories) && giaoDich.inventories.length > 0 ? (
-  giaoDich.inventories.map((acc, idx) => (
-    <Typography key={idx} variant="body2">
-      {giaoDich.loaigiaodich === "Nhập kho" ? (
-        <>
-          • IDVT: {acc.idvattu} - {acc.tenvattu || "Không xác định"}
-          {" - SL: "}{acc.soluong || 0}
-          {" - ĐG: "}{acc.dongianhap || 0}
-        </>
-      ) : (
-        <>
-          • {acc.tenvattu || "Không xác định"} - SL: {acc.soluong || 0}
-        </>
-      )}
-    </Typography>
-  ))
-) : (
-  <Typography variant="body2" color="error">
-    Không có vật tư nào
-  </Typography>
-)}
-
+                  )}
 
                   {!giaoDich.read && (
                     <Box
@@ -282,7 +268,6 @@ const ChiTietAppbar = () => {
               )}
             </Box>
           ))
-
         )}
       </Menu>
     </Box>

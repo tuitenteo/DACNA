@@ -18,6 +18,7 @@ import {
   Button,
 } from "@mui/material";
 import { formatDateToDDMMYYYY } from "../utils/utils";
+import { Star } from "@mui/icons-material";
 
 const TonKho = () => {
   const [tonKhoData, setTonKhoData] = useState([]);
@@ -272,30 +273,32 @@ const TonKho = () => {
                 <TableCell>{item.tendanhmuc || "Không xác định"}</TableCell>
                 <TableCell>{formatDateToDDMMYYYY(item.ngayhethan)}</TableCell>
                 <TableCell>
-                  {item.tongnhap}
-                  <span
-                    style={{
-                      color: "blue",
-                      cursor: "pointer",
-                      textDecoration: "underline",
-                    }}
-                    onClick={() => handleOpenDetail("nhap", item.idvattu)}
-                  >
-                    chi tiết
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    {item.tongnhap}
+                    <Star
+                      style={{
+                        color: "#f7ede2",
+                        cursor: "pointer",
+                        marginLeft: "5px",
+                        fontSize: "small",
+                      }}
+                      onClick={() => handleOpenDetail("nhap", item.idvattu)}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {item.tongxuat}
-                  <span
-                    style={{
-                      color: "blue",
-                      cursor: "pointer",
-                      textDecoration: "underline",
-                    }}
-                    onClick={() => handleOpenDetail("xuat", item.idvattu)}
-                  >
-                    chi tiết
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    {item.tongxuat}
+                    <Star
+                      style={{
+                        color: "#f7ede2",
+                        cursor: "pointer",
+                        marginLeft: "5px",
+                        fontSize: "small",
+                      }}
+                      onClick={() => handleOpenDetail("xuat", item.idvattu)}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell>{item.tonkhohientai}</TableCell>
                 <TableCell>{item.tonkhothucte || "Không xác định"}</TableCell>
@@ -304,6 +307,7 @@ const TonKho = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      
       {/* hiển thị modal chi tiết */}
       <Dialog
         open={openModal}
