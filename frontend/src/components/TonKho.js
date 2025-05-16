@@ -11,14 +11,13 @@ import {
   TableContainer,
   Paper,
   TablePagination,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
+  TextField,
 } from "@mui/material";
 import { formatDateToDDMMYYYY } from "../utils/utils";
-import { Star } from "@mui/icons-material";
+import { Add } from "@mui/icons-material";
+import LichSuNhapKho from "./tonkho/LichSuNhapKho";
+import LichSuXuatKho from "./tonkho/LichSuXuatKho";
 
 const TonKho = () => {
   const [tonKhoData, setTonKhoData] = useState([]);
@@ -29,9 +28,10 @@ const TonKho = () => {
   const [view, setView] = useState("all"); // Quản lý chế độ hiển thị
   const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng hiển thị
   const [currentPage, setCurrentPage] = useState(1); // Trang hiện tại
-  const [openModal, setOpenModal] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
-  const [detailList, setDetailList] = useState([]);
+  const [openNhapModal, setOpenNhapModal] = useState(false);
+  const [openXuatModal, setOpenXuatModal] = useState(false);
+  const [selectedVatTuId, setSelectedVatTuId] = useState(null);
+
 
   useEffect(() => {
     const fetchTonKho = async () => {
@@ -148,21 +148,17 @@ const TonKho = () => {
     return "ton-kho-du"; // Tồn kho đủ/ổn định: Màu xanh lá
   };
 
-  const handleOpenDetail = async (type, idvattu) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.get(`http://localhost:5000/api/tonkho/${idvattu}/${type}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
 
-    setModalTitle(type === "nhap" ? "Chi tiết tổng nhập" : "Chi tiết tổng xuất");
-    setDetailList(response.data);
-    setOpenModal(true);
-  } catch (err) {
-    console.error("Lỗi lấy chi tiết:", err);
-    alert("Không thể tải chi tiết " + type);
-  }
-};
+const handleOpenNhapModal = (idVatTu) => {
+    setSelectedVatTuId(idVatTu);
+    setOpenNhapModal(true);
+  };
+
+  const handleOpenXuatModal = (idVatTu) => {
+    setSelectedVatTuId(idVatTu);
+    setOpenXuatModal(true);
+  };
+
 
   return (
     <div>
@@ -172,36 +168,17 @@ const TonKho = () => {
       <div
         style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}
       >
-        {/* Input tìm kiếm */}
-        <input
-          type="text"
-          placeholder="Tìm kiếm vật tư..."
+        <TextField
+          placeholder="Tìm kiếm theo tên hoặc vai trò..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            padding: "10px",
-            width: "500px",
-            fontSize: "16px",
-            border: "1px solid #ccc",
-            borderRadius: "5px",
-            marginRight: "10px",
-          }}
+          style={{ marginRight: "10px", width: "640px" }}
+          size="small"
         />
-
-        {/* Nút sắp xếp */}
-        <button
+        <Button
+          variant="contained"
           onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-          style={{
-            padding: "10px",
-            cursor: "pointer",
-            background: "#007bff",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={{ marginRight: "10px", background: "#007bff" }}
         >
           <SortByAlphaIcon
             style={{
@@ -209,7 +186,7 @@ const TonKho = () => {
                 sortOrder === "asc" ? "rotate(0deg)" : "rotate(180deg)",
             }}
           />
-        </button>
+        </Button>
       </div>
       <div
         style={{
@@ -275,28 +252,28 @@ const TonKho = () => {
                 <TableCell>
                   <div style={{ display: "flex", alignItems: "center" }}>
                     {item.tongnhap}
-                    <Star
+                    <Add
                       style={{
                         color: "#f7ede2",
                         cursor: "pointer",
                         marginLeft: "5px",
                         fontSize: "small",
                       }}
-                      onClick={() => handleOpenDetail("nhap", item.idvattu)}
+                      onClick={() => handleOpenNhapModal(item.idvattu)}
                     />
                   </div>
                 </TableCell>
                 <TableCell>
                   <div style={{ display: "flex", alignItems: "center" }}>
                     {item.tongxuat}
-                    <Star
+                    <Add
                       style={{
                         color: "#f7ede2",
                         cursor: "pointer",
                         marginLeft: "5px",
                         fontSize: "small",
                       }}
-                      onClick={() => handleOpenDetail("xuat", item.idvattu)}
+                      onClick={() => handleOpenXuatModal(item.idvattu)}
                     />
                   </div>
                 </TableCell>
@@ -307,31 +284,20 @@ const TonKho = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      
-      {/* hiển thị modal chi tiết */}
-      <Dialog
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>{modalTitle}</DialogTitle>
-        <DialogContent dividers>
-          {detailList.length > 0 ? (
-            detailList.map((item, index) => (
-              <p key={index}>
-                {formatDateToDDMMYYYY(item.ngayxuat || item.ngaynhap)}:{" "}
-                {item.soluong}
-              </p>
-            ))
-          ) : (
-            <p>Không có dữ liệu chi tiết.</p>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenModal(false)}>Đóng</Button>
-        </DialogActions>
-      </Dialog>
+
+      {/* Modal Lịch Sử Nhập Kho */}
+      <LichSuNhapKho
+        open={openNhapModal}
+        onClose={() => setOpenNhapModal(false)}
+        idVatTu={selectedVatTuId}
+      />
+
+      {/* Modal Lịch Sử Xuất Kho */}
+      <LichSuXuatKho
+        open={openXuatModal}
+        onClose={() => setOpenXuatModal(false)}
+        idVatTu={selectedVatTuId}
+      />
 
       {/* Phân trang */}
       <TablePagination

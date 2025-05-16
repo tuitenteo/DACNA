@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const ChiTietAppbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -16,6 +17,7 @@ const ChiTietAppbar = () => {
   const [seenIds, setSeenIds] = useState([]);
   const [isSeenIdsLoaded, setIsSeenIdsLoaded] = useState(false);
   const [hasNewNotifications, setHasNewNotifications] = useState(false); // Trạng thái có tin mới hay không
+  const navigate = useNavigate();
 
   const userId = localStorage.getItem("userId"); //  lưu userId vào localStorage khi login
   const seenKey = `seenIds_${userId}`; // thông báo đã đọc phải đc ghi nhớ theo từng user
@@ -105,7 +107,7 @@ const ChiTietAppbar = () => {
     }
   }, [seenIds, isSeenIdsLoaded]);
 
-  //mới sửa
+  // Lấy danh sách ID đã xem từ localStorage
   useEffect(() => {
     const stored = localStorage.getItem(seenKey);
     if (stored) {
@@ -126,11 +128,8 @@ const ChiTietAppbar = () => {
     }
   }, [seenIds, userId, seenKey]);
 
-  const handleOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleNotificationClick = (idgiaodich) => {
+  // Đánh dấu giao dịch là đã đọc và điều hướng đến trang chi tiết
+  const handleNotificationClick = (idgiaodich, giaoDich) => {
     // Đánh dấu giao dịch là đã xem (đọc)
     setSeenIds((prev) => {
       const updatedSeenIds = Array.from(new Set([...prev, idgiaodich])); // Thêm ID vào danh sách đã xem
@@ -142,8 +141,32 @@ const ChiTietAppbar = () => {
     setNewTransactions((prev) =>
       prev.filter((gd) => gd.idgiaodich !== idgiaodich)
     );
+
+    // Điều hướng và truyền state để highlight dòng
+    if (giaoDich.idxuatkho) {
+      navigate("/dashboard/xuatkho", {
+        state: {
+          idxuatkho: giaoDich.idxuatkho,
+          ngayxuat: giaoDich.ngayxuat
+        ? giaoDich.ngayxuat.slice(0, 10)
+        : giaoDich.ngaygiaodich?.slice(0, 10),
+    },
+      });
+    } else if (giaoDich.idnhapkho) {
+      navigate("/dashboard/nhapkho", {
+        state: { idnhapkho: giaoDich.idnhapkho },
+      });
+    } else {
+      alert("Không tìm thấy thông tin giao dịch!");
+    }
   };
 
+  // Mở menu thông báo
+  const handleOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  // Đóng menu thông báo
   const handleClose = () => setAnchorEl(null);
 
   return (
@@ -183,7 +206,9 @@ const ChiTietAppbar = () => {
           newTransactions.map((giaoDich, index) => (
             <Box key={index}>
               <MenuItem
-                onClick={() => handleNotificationClick(giaoDich.idgiaodich)}
+                onClick={() =>
+                  handleNotificationClick(giaoDich.idgiaodich, giaoDich)
+                }
               >
                 <Box sx={{ position: "relative" }}>
                   <Typography variant="body2">
@@ -210,34 +235,6 @@ const ChiTietAppbar = () => {
                       {}
                     )}
                   </Typography>
-
-                  {/* // Hiển thị danh sách vật tư */}
-                  {Array.isArray(giaoDich.inventories) &&
-                  giaoDich.inventories.length > 0 ? (
-                    giaoDich.inventories.map((acc, idx) => (
-                      <Typography key={idx} variant="body2">
-                        {giaoDich.loaigiaodich === "Nhập kho" ? (
-                          <>
-                            • IDVT: {acc.idvattu} -{" "}
-                            {acc.tenvattu || "Không xác định"}
-                            {" - SL: "}
-                            {acc.soluong || 0}
-                            {" - ĐG: "}
-                            {acc.dongianhap || 0}
-                          </>
-                        ) : (
-                          <>
-                            • {acc.tenvattu || "Không xác định"} - SL:{" "}
-                            {acc.soluong || 0}
-                          </>
-                        )}
-                      </Typography>
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="error">
-                      Không có vật tư nào
-                    </Typography>
-                  )}
 
                   {!giaoDich.read && (
                     <Box

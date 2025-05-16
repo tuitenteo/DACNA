@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  //password: "kyanh",
-    password: "123123",
+  password: "kyanh",
+    // password: "123123",
   port: 5432,
 });
 
@@ -502,10 +502,12 @@ app.get("/lichsugiaodich", verifyToken, async (req, res) => {
         nd.tendangnhap AS tennguoidung,
         lgd.loaigiaodich,
         lgd.soluong,
-        lgd.ngaygiaodich
+        lgd.ngaygiaodich,
+        xk.ngayxuat -- Thêm dòng này
       FROM lichsugiaodich lgd
       LEFT JOIN vattu vt ON lgd.idvattu = vt.idvattu
       LEFT JOIN nguoidung nd ON lgd.idnguoidung = nd.idnguoidung
+      LEFT JOIN xuatkho xk ON lgd.idxuatkho = xk.idxuatkho -- Thêm dòng này
       ORDER BY lgd.ngaygiaodich DESC
     `);
 
@@ -1182,9 +1184,15 @@ app.get("/api/tonkho/:idvattu/xuat", verifyToken, async (req, res) => {
     const result = await pool.query(`
       SELECT 
         XK.NgayXuat,
-        CTXK.SoLuong
+        CTXK.SoLuong,
+        CTXK.IDVatTu,
+        VT.TenVatTu,
+        ND.TenDangNhap AS NguoiDung,
+        CTXK.NguoiYeuCau
       FROM XuatKho XK
       JOIN ChiTietXuatKho CTXK ON XK.IDXuatKho = CTXK.IDXuatKho
+      JOIN VatTu VT ON CTXK.IDVatTu = VT.IDVatTu
+      LEFT JOIN NguoiDung ND ON CTXK.IDNguoiDung = ND.IDNguoiDung
       WHERE CTXK.IDVatTu = $1
       ORDER BY XK.NgayXuat ASC
     `, [idvattu]);
@@ -1202,9 +1210,14 @@ app.get("/api/tonkho/:idvattu/nhap", verifyToken, async (req, res) => {
     const result = await pool.query(`
       SELECT 
         NK.NgayNhap,
-        CTNK.SoLuong
+        CTNK.SoLuong,
+        CTNK.IDVatTu,
+        VT.TenVatTu,
+        ND.TenDangNhap AS NguoiDung
       FROM NhapKho NK
       JOIN ChiTietNhapKho CTNK ON NK.IDNhapKho = CTNK.IDNhapKho
+      JOIN VatTu VT ON CTNK.IDVatTu = VT.IDVatTu
+      LEFT JOIN NguoiDung ND ON CTNK.IDNguoiDung = ND.IDNguoiDung
       WHERE CTNK.IDVatTu = $1
       ORDER BY NK.NgayNhap ASC
     `, [idvattu]);

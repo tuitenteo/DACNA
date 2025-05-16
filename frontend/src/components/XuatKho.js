@@ -20,25 +20,27 @@ import {
   Paper,
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import { useLocation } from "react-router-dom";
 
 const XuatKho = () => {
   const [NguoiYeuCau, setNguoiYeuCau] = useState("");
   const [PhoneNguoiYeuCau, setPhoneNguoiYeuCau] = useState("");
   const [IDNguoiDung, setIDNguoiDung] = useState("");
   const [TenNguoiDung, setTenNguoiDung] = useState("");
-  const [vatTuGroups, setVatTuGroups] = useState([]); 
-  const [currentVatTu, setCurrentVatTu] = useState({ 
+  const [vatTuGroups, setVatTuGroups] = useState([]);
+  const [currentVatTu, setCurrentVatTu] = useState({
     IDVatTu: "",
     TenVatTu: "",
     SoLuong: "",
     DonGia: "",
   });
-  const [vatTuList, setVatTuList] = useState([]); 
+  const [vatTuList, setVatTuList] = useState([]);
   const [nguoiDungList, setNguoiDungList] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [phieuXuatKho, setPhieuXuatKho] = useState(null);
   const [open, setOpen] = useState(false);
+  const location = useLocation();  // Sử dụng useLocation để lấy thông tin từ route
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,7 +102,7 @@ const XuatKho = () => {
       console.log("Xuất kho: ", token);
 
       if (response.data.success) {
-        setMessage(response.data.message); 
+        setMessage(response.data.message);
         setPhieuXuatKho(response.data.data);
         setVatTuGroups([]); // Xóa danh sách vật tư sau khi xuất kho thành công
         setNguoiYeuCau("");
@@ -124,6 +126,19 @@ const XuatKho = () => {
       currentVatTu.SoLuong &&
       currentVatTu.DonGia
     ) {
+      // Kiểm tra nếu số lượng xuất <= 0
+      if (parseInt(currentVatTu.SoLuong, 10) <= 0) {
+        setError("Số lượng xuất phải lớn hơn 0!");
+        return;
+      }
+
+      // Kiểm tra nếu số lượng xuất lớn hơn tồn kho
+      if (parseInt(currentVatTu.SoLuong, 10) > currentVatTu.TonKhoHienTai) {
+        setError("Số lượng xuất không được lớn hơn số lượng tồn kho!");
+        return;
+      }
+
+      // Thêm vật tư vào danh sách nếu hợp lệ
       setVatTuGroups([...vatTuGroups, currentVatTu]);
       setCurrentVatTu({
         IDVatTu: "",
@@ -134,8 +149,8 @@ const XuatKho = () => {
         NgayHetHan: "",
       });
       setError(""); // Xóa lỗi nếu thêm thành công
-    } else  {
-        setError("Vui lòng nhập đầy đủ thông tin vật tư!");
+    } else {
+      setError("Vui lòng nhập đầy đủ thông tin vật tư!");
     }
   };
 
@@ -147,8 +162,9 @@ const XuatKho = () => {
 
   // Hàm mở form
   const handleOpen = () => setOpen(true);
-  const handleClose = () => {  // Hàm đóng form
-    setOpen(false); 
+  const handleClose = () => {
+    // Hàm đóng form
+    setOpen(false);
     setError(""); // Xóa lỗi khi đóng form
     setCurrentVatTu({
       IDVatTu: "",
@@ -427,7 +443,10 @@ const XuatKho = () => {
       {phieuXuatKho && <XuatKhoPdf phieuXuatKho={phieuXuatKho} />}
 
       {/* Hiển thị danh sách xuất kho */}
-      <DanhSachXuatKho />
+      <DanhSachXuatKho
+        idxuatkhoFromRoute={location.state?.idxuatkho}  // Lấy từ route
+        ngayxuatFromRoute={location.state?.ngayxuat}
+      />
     </div>
   );
 };

@@ -231,8 +231,6 @@ const LoHang = () => {
                             ))}
                         </TableBody>
                     </Table>
-                </DialogContent>
-                <DialogActions>
                     <TablePagination
                         component="div"
                         count={chiTietLoHang.length}
@@ -245,6 +243,8 @@ const LoHang = () => {
                             `${from}-${to} trên ${count !== -1 ? count : `nhiều hơn ${to}`}`
                         }
                     />
+                </DialogContent>
+                <DialogActions>
                     <Button onClick={handleCloseDialog}>Đóng</Button>
                 </DialogActions>
             </Dialog>

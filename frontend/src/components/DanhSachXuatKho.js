@@ -22,7 +22,14 @@ import DownloadIcon from "@mui/icons-material/Download";
 import XuatKhoPdf from "./XuatKhoPdf"; // Import XuatKhoPdf
 import {formatDateToDDMMYYYY} from "../utils/utils"; // Import formatDateToDDMMYYYY function
 
-const DanhSachXuatKho = () => {
+// Hàm định dạng ngày tháng năm 
+function parseLocalDate(str) {
+  // str dạng "2025-04-28"
+  const [year, month, day] = str.split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day) + 1);
+}
+
+const DanhSachXuatKho = ({ idxuatkhoFromRoute, ngayxuatFromRoute }) => {
   const [xuatKhoData, setXuatKhoData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,6 +42,8 @@ const DanhSachXuatKho = () => {
   const [endDate, setEndDate] = useState(today);
   const [selectedTransaction, setSelectedTransaction] = useState(null); // State for selected transaction
   const [openPdfDialog, setOpenPdfDialog] = useState(false); // State for PDF dialog
+  const [hasSetDateFromRoute, setHasSetDateFromRoute] = useState(false);  // trạng thái để kiểm tra xem đã set ngày từ route chưa
+
 
   useEffect(() => {
     const fetchXuatKhoData = async () => {
@@ -55,15 +64,29 @@ const DanhSachXuatKho = () => {
     fetchXuatKhoData();
   }, []);
 
+  // Reset lại state khi props thay đổi (đặc biệt khi điều hướng bằng navigate)
+  useEffect(() => {
+    setHasSetDateFromRoute(false);
+  }, [idxuatkhoFromRoute, ngayxuatFromRoute]);
+
+  useEffect(() => {
+    if (ngayxuatFromRoute && !hasSetDateFromRoute) {
+      const localDate = parseLocalDate(ngayxuatFromRoute);
+      setStartDate(localDate);
+      setEndDate(localDate);
+      setHasSetDateFromRoute(true);
+    }
+  }, [ngayxuatFromRoute, hasSetDateFromRoute]);
+
   const filteredData = xuatKhoData.filter((item) => {
     const query = searchQuery.toLowerCase();
     const matchesSearch =
       item.tenvattu.toLowerCase().includes(query) ||
       item.nguoiyeucau.toLowerCase().includes(query) ||
-      item.phonenguoiyeucau.toString().includes(query) ||
+      // item.phonenguoiyeucau.toString().includes(query) ||
       item.tennguoidung.toLowerCase().includes(query) ||
       item.idxuatkho.toString().includes(query) ||
-      item.idvattu.toString().includes(query) ;
+      item.idvattu.toString().includes(query);
 
     const ngayXuat = new Date(item.ngayxuat);
     const isWithinDateRange =
@@ -91,8 +114,8 @@ const DanhSachXuatKho = () => {
     const filteredTransactions = xuatKhoData.filter(
       (item) => item.idxuatkho === transaction.idxuatkho
     );
-  setSelectedTransaction(filteredTransactions); // Truyền dữ liệu bao gồm dongia
-  setOpenPdfDialog(true);
+    setSelectedTransaction(filteredTransactions); // Truyền dữ liệu bao gồm dongia
+    setOpenPdfDialog(true);
   };
 
   const handleClosePdfDialog = () => {
@@ -178,30 +201,41 @@ const DanhSachXuatKho = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedData.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.idxuatkho}</TableCell>
-                <TableCell>{formatDateToDDMMYYYY(item.ngayxuat)}</TableCell>
-                <TableCell>{item.idvattu}</TableCell>
-                <TableCell>{item.tenvattu}</TableCell>
-                <TableCell>{item.soluong}</TableCell>
-                <TableCell>{item.nguoiyeucau}</TableCell>
-                <TableCell>{item.phonenguoiyeucau}</TableCell>
-                <TableCell>{item.tennguoidung}</TableCell>
-                <TableCell>{item.dongia}</TableCell>
-                <TableCell>
-                  <Button
-                    onClick={() => handleDownloadClick(item)}
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    startIcon={<DownloadIcon />}
-                  >
-                    Tải
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {paginatedData.map((item, index) => {
+              const isHighlighted =
+                idxuatkhoFromRoute && item.idxuatkho === idxuatkhoFromRoute;
+              return (
+                <TableRow
+                  key={index}
+                  style={
+                    isHighlighted
+                      ? { backgroundColor: "#ffe082" } // vàng nhạt
+                      : {}
+                  }
+                >
+                  <TableCell>{item.idxuatkho}</TableCell>
+                  <TableCell>{formatDateToDDMMYYYY(item.ngayxuat)}</TableCell>
+                  <TableCell>{item.idvattu}</TableCell>
+                  <TableCell>{item.tenvattu}</TableCell>
+                  <TableCell>{item.soluong}</TableCell>
+                  <TableCell>{item.nguoiyeucau}</TableCell>
+                  <TableCell>{item.phonenguoiyeucau}</TableCell>
+                  <TableCell>{item.tennguoidung}</TableCell>
+                  <TableCell>{item.dongia}</TableCell>
+                  <TableCell>
+                    <Button
+                      onClick={() => handleDownloadClick(item)}
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      startIcon={<DownloadIcon />}
+                    >
+                      Tải
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
