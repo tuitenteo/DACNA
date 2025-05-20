@@ -110,7 +110,7 @@ const NguoiDung = () => {
   };
 
   // Xử lý lưu (thêm hoặc chỉnh sửa)
-  const handleSave = async () => {
+  const handleAddOrUpdate = async () => {
     const token = localStorage.getItem("token");
     try {
       if (selectedUser) {
@@ -137,17 +137,15 @@ const NguoiDung = () => {
       fetchNguoiDung();
       handleCloseModal();
     } catch (error) {
-      if (
-        error.response &&
-        error.response.data &&
-        error.response.data.message
-      ) {
-        // Hiển thị thông báo lỗi cụ thể từ server
-        alert(error.response.data.message);
-      } else {
-        // Hiển thị lỗi chung nếu không có thông báo cụ thể
-        alert("Có lỗi xảy ra khi lưu người dùng.");
-      }
+      // Log lỗi chi tiết để debug
+      console.error("Lỗi khi lưu người dùng:", error, error?.response?.data);
+      // Ưu tiên hiển thị message từ server
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Có lỗi xảy ra khi lưu người dùng.";
+      alert(msg);
     }
   };
 
@@ -388,8 +386,8 @@ const NguoiDung = () => {
             <Button variant="outlined" onClick={handleCloseModal}>
               Hủy
             </Button>
-            <Button variant="contained" onClick={handleSave}>
-              Thêm
+            <Button variant="contained" onClick={handleAddOrUpdate}>
+              {selectedUser ? "Cập nhật" : "Thêm"}
             </Button>
           </Box>
         </Box>

@@ -99,7 +99,7 @@ const NhaCungCap = () => {
     try {
       let response;
       if (isEditing) {
-        await axios.put(
+        response = await axios.put(
           `http://localhost:5000/api/nhacungcap/${formData.idncc}`,
           formData,
           {
@@ -109,11 +109,15 @@ const NhaCungCap = () => {
           }
         );
       } else {
-        await axios.post("http://localhost:5000/api/nhacungcap", formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        response = await axios.post(
+          "http://localhost:5000/api/nhacungcap",
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       }
 
       const idncc = isEditing ? formData.idncc : response.data.data.idncc;
@@ -148,7 +152,13 @@ const NhaCungCap = () => {
       fetchNhaCungCap();
     } catch (err) {
       console.error("Error adding/updating nhà cung cấp:", err);
-      alert("Có lỗi xảy ra!");
+      // Hiển thị thông báo lỗi chi tiết từ server nếu có
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Có lỗi xảy ra!";
+      alert(msg);
     }
   };
 
@@ -416,6 +426,7 @@ const NhaCungCap = () => {
               name="website"
               value={formData.website}
               onChange={handleInputChange}
+              required
             />
             <FormControl fullWidth margin="normal">
               <Autocomplete

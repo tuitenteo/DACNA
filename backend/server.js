@@ -64,10 +64,19 @@ app.put("/api/nguoidung/:id", verifyToken, async (req, res) => {
   }
 
   try {
+    // Kiểm tra xem tên người dùng có tồn tại không
+    const userExists = await pool.query(
+      "SELECT * FROM nguoidung WHERE tendangnhap = $1 AND idnguoidung != $2",
+      [tendangnhap, id]
+    );
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ message: "Tên đăng nhập đã tồn tại." });
+    }
+
     // Kiểm tra xem email đã tồn tại chưa
     const emailExists = await pool.query(
       "SELECT * FROM nguoidung WHERE email = $1 AND idnguoidung != $2",
-      [email, id]
+      [email , id]
     );
     if (emailExists.rows.length > 0) {
       return res.status(400).json({ message: "Email đã được sử dụng." });
@@ -300,47 +309,6 @@ app.post("/api/dangnhap", async (req, res) => {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
-
-app.put("/api/nguoidung/:id", verifyToken, async (req, res) => {
-  const { id } = req.params;
-  const { tendangnhap, matkhau, vaitro, trangthai } = req.body;
-
-  if (!tendangnhap || !matkhau || !vaitro) {
-    return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
-  }
-
-  try {
-    // Kiểm tra xem người dùng có tồn tại không
-    const user = await pool.query(
-      "SELECT * FROM nguoidung WHERE idnguoidung = $1",
-      [id]
-    );
-    if (user.rows.length === 0) {
-      return res.status(404).json({ message: "Người dùng không tồn tại." });
-    }
-
-    // Cập nhật thông tin người dùng
-    const result = await pool.query(
-      `UPDATE nguoidung 
-       SET tendangnhap = $1, 
-           matkhau = $2, 
-           vaitro = $3, 
-           trangthai = $4
-       WHERE idnguoidung = $5 RETURNING *`,
-      [tendangnhap, matkhau, vaitro, trangthai || "active", id]
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Cập nhật người dùng thành công.",
-      data: result.rows[0],
-    });
-  } catch (err) {
-    console.error("Error updating user:", err);
-    res.status(500).json({ message: "Có lỗi xảy ra khi cập nhật người dùng." });
-  }
-});
-
 
 app.get("/danhmuc", verifyToken, async (req, res) => {
   try {
@@ -620,19 +588,64 @@ app.get("/api/thongke-nhapxuat", verifyToken, async (req, res) => {
 });
 
 
-
 app.post("/api/nhacungcap", verifyToken, async (req, res) => {
-  const { tenncc, sodienthoai, email, diachi, stk, mst } = req.body;
+  const { tenncc, sodienthoai, email, diachi, stk, mst, website } = req.body;
 
-  if (!tenncc || !sodienthoai || !email || !diachi || !stk || !mst) {
+  if (!tenncc || !sodienthoai || !email || !diachi || !stk || !mst || !website) {
     return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
   }
 
   try {
+    // Kiểm tra trùng tên nhà cung cấp
+    const checkName = await pool.query(
+      "SELECT * FROM nhacungcap WHERE tenncc = $1",
+      [tenncc]
+    );
+    if (checkName.rows.length > 0) {
+      return res.status(400).json({ message: "Tên nhà cung cấp đã tồn tại." });
+    }
+
+    // Kiểm tra trùng email
+    const checkEmail = await pool.query(
+      "SELECT * FROM nhacungcap WHERE email = $1",
+      [email]
+    );
+    if (checkEmail.rows.length > 0) {
+      return res.status(400).json({ message: "Email đã tồn tại." });
+    }
+
+    // Kiểm tra trùng số điện thoại
+    const checkPhone = await pool.query(
+      "SELECT * FROM nhacungcap WHERE sodienthoai = $1",
+      [sodienthoai]
+    );
+    if (checkPhone.rows.length > 0) {
+      return res.status(400).json({ message: "Số điện thoại đã tồn tại." });
+    }
+
+    // Kiểm tra trùng mã số thuế
+    const checkMST = await pool.query(
+      "SELECT * FROM nhacungcap WHERE mst = $1",
+      [mst]
+    );
+    if (checkMST.rows.length > 0) {
+      return res.status(400).json({ message: "Mã số thuế đã tồn tại." });
+    }
+
+    // Kiểm tra trùng số tài khoản
+    const checkSTK = await pool.query(
+      "SELECT * FROM nhacungcap WHERE stk = $1",
+      [stk]
+    );
+    if (checkSTK.rows.length > 0) {
+      return res.status(400).json({ message: "Số tài khoản đã tồn tại." });
+    }
+    
+
     const result = await pool.query(
       `INSERT INTO nhacungcap (tenncc, sodienthoai, email, diachi, stk, mst, website) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [tenncc, sodienthoai, email, diachi, stk, mst]
+      [tenncc, sodienthoai, email, diachi, stk, mst, website]
     );
     res.status(201).json({
       success: true,
@@ -640,6 +653,10 @@ app.post("/api/nhacungcap", verifyToken, async (req, res) => {
       data: result.rows[0]
     });
   } catch (err) {
+    // Xử lý lỗi trùng lặp unique constraint
+    if (err.code === "23505") {
+      return res.status(400).json({ message: "Dữ liệu đã tồn tại hoặc bị trùng lặp." });
+    }
     console.error("Error adding nhà cung cấp:", err);
     res.status(500).json({
       message: "Có lỗi xảy ra khi thêm nhà cung cấp.",
@@ -647,6 +664,7 @@ app.post("/api/nhacungcap", verifyToken, async (req, res) => {
     });
   }
 });
+
 
 app.delete("/api/nhacungcap/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
