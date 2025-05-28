@@ -8,51 +8,62 @@ import {
     TableRow,
     TableCell,
     TableBody,
-    Select,
-    MenuItem,
     Typography,
+    TextField,
 } from "@mui/material";
 
 const BaoGia = () => {
-    const [suppliers, setSuppliers] = useState([]);
-    const [selectedSupplier, setSelectedSupplier] = useState("");
     const [materials, setMaterials] = useState([]);
     const [selectedMaterials, setSelectedMaterials] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
+    const [searchQuery, setSearchQuery] = useState(""); // Thêm state cho tìm kiếm
+
+    useEffect(() => {
+        const fetchMaterials = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const res = await axios.get("http://localhost:5000/api/vattu", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                setMaterials(res.data);
+            } catch (error) {
+                console.error("Lỗi khi lấy danh sách vật tư:", error);
+            }
+        };
+        fetchMaterials();
+    }, []);
 
     useEffect(() => {
         const fetchSuppliers = async () => {
+            if (selectedMaterials.length === 0) {
+                setSuppliers([]);
+                return;
+            }
             try {
                 const token = localStorage.getItem("token");
-                const res = await axios.get("http://localhost:5000/api/nhacungcap", {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                setSuppliers(res.data);
+                const supplierLists = await Promise.all(
+                    selectedMaterials.map(async (idvattu) => {
+                        const res = await axios.get(
+                            `http://localhost:5000/api/nhacungcap/vattu/${idvattu}`,
+                            { headers: { Authorization: `Bearer ${token}` } }
+                        );
+                        return res.data;
+                    })
+                );
+                let commonSuppliers = supplierLists[0] || [];
+                for (let i = 1; i < supplierLists.length; i++) {
+                    commonSuppliers = commonSuppliers.filter(sup =>
+                        supplierLists[i].some(s => s.idncc === sup.idncc)
+                    );
+                }
+                setSuppliers(commonSuppliers);
             } catch (error) {
                 console.error("Lỗi khi lấy danh sách nhà cung cấp:", error);
+                setSuppliers([]);
             }
         };
         fetchSuppliers();
-    }, []);
-
-    const handleSupplierChange = async (supplierId) => {
-        setSelectedSupplier(supplierId);
-        setSelectedMaterials([]);
-        if (supplierId) {
-            try {
-                const token = localStorage.getItem("token");
-                const res = await axios.get(
-                    `http://localhost:5000/api/vattu/nhacungcap/${supplierId}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                setMaterials(res.data);
-            } catch (error) {
-                console.error("Lỗi khi lấy vật tư theo nhà cung cấp:", error);
-                setMaterials([]);
-            }
-        } else {
-            setMaterials([]);
-        }
-    };
+    }, [selectedMaterials]);
 
     const handleMaterialSelection = (id) => {
         setSelectedMaterials((prev) =>
@@ -61,11 +72,10 @@ const BaoGia = () => {
     };
 
     const handleSendEmail = async () => {
-        if (!selectedSupplier || selectedMaterials.length === 0) {
-            alert("Vui lòng chọn nhà cung cấp và ít nhất một vật tư.");
+        if (selectedMaterials.length === 0 || suppliers.length === 0) {
+            alert("Vui lòng chọn vật tư và đảm bảo có nhà cung cấp.");
             return;
         }
-        const supplier = suppliers.find((s) => s.idncc === selectedSupplier);
         const selectedMaterialDetails = materials.filter((m) =>
             selectedMaterials.includes(m.idvattu)
         );
@@ -74,7 +84,7 @@ const BaoGia = () => {
             .join("\n");
 
         const emailContent = `
-Kính gửi ${supplier.tenncc},
+Kính gửi Quý Nhà Cung Cấp,
 
 Chúng tôi muốn yêu cầu báo giá cho các vật tư sau:
 ${materialList}
@@ -85,48 +95,52 @@ Công ty KKTL
 
         try {
             const token = localStorage.getItem("token");
-            await axios.post(
-                "http://localhost:5000/api/send-email",
-                {
-                    email: supplier.email,
-                    subject: "Yêu cầu báo giá vật tư",
-                    message: emailContent,
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
+            await Promise.all(
+                suppliers.map((supplier) =>
+                    axios.post(
+                        "http://localhost:5000/api/send-email",
+                        {
+                            email: supplier.email,
+                            subject: "Yêu cầu báo giá vật tư",
+                            message: emailContent,
+                        },
+                        {
+                            headers: { Authorization: `Bearer ${token}` },
+                        }
+                    )
+                )
             );
-            alert("Email đã được gửi đến nhà cung cấp.");
+            alert("Email đã được gửi đến tất cả nhà cung cấp.");
         } catch (error) {
             console.error("Lỗi khi gửi email:", error);
             alert("Không thể gửi email.");
         }
     };
 
+    // Lọc vật tư theo từ khóa tìm kiếm
+    const filteredMaterials = materials.filter((material) =>
+        material.tenvattu.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(material.idvattu).includes(searchQuery)
+    );
+
     return (
         <Box sx={{ padding: "20px" }}>
             <Typography variant="h4" gutterBottom>Báo Giá</Typography>
 
-            {/* Chọn nhà cung cấp */}
+            {/* Thanh tìm kiếm vật tư */}
             <Box sx={{ marginBottom: "20px" }}>
-                <Typography variant="h6">Chọn Nhà Cung Cấp</Typography>
-                <Select
-                    value={selectedSupplier}
-                    onChange={(e) => handleSupplierChange(e.target.value)}
+                <TextField
+                    label="Tìm kiếm vật tư"
+                    variant="outlined"
                     fullWidth
-                >
-                    <MenuItem value="">-- Chọn nhà cung cấp --</MenuItem>
-                    {suppliers.map((supplier) => (
-                        <MenuItem key={supplier.idncc} value={supplier.idncc}>
-                            {supplier.tenncc}
-                        </MenuItem>
-                    ))}
-                </Select>
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </Box>
 
             {/* Danh sách vật tư */}
             <Box sx={{ marginBottom: "20px" }}>
-                <Typography variant="h6">Danh Sách Vật Tư</Typography>
+                <Typography variant="h6">Chọn Vật Tư</Typography>
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -136,7 +150,7 @@ Công ty KKTL
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {materials.map((material) => (
+                        {filteredMaterials.map((material) => (
                             <TableRow key={material.idvattu}>
                                 <TableCell>
                                     <input
@@ -153,12 +167,41 @@ Công ty KKTL
                 </Table>
             </Box>
 
+            {/* Danh sách nhà cung cấp */}
+            <Box sx={{ marginBottom: "20px" }}>
+                <Typography variant="h6">Nhà Cung Cấp Hỗ Trợ Các Vật Tư Đã Chọn</Typography>
+                {suppliers.length === 0 ? (
+                    <Typography variant="body2">Không có nhà cung cấp nào phù hợp.</Typography>
+                ) : (
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Tên Nhà Cung Cấp</TableCell>
+                                <TableCell>Email</TableCell>
+                                <TableCell>Số Điện Thoại</TableCell>
+                                <TableCell>Địa Chỉ</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {suppliers.map((supplier) => (
+                                <TableRow key={supplier.idncc}>
+                                    <TableCell>{supplier.tenncc}</TableCell>
+                                    <TableCell>{supplier.email}</TableCell>
+                                    <TableCell>{supplier.sodienthoai}</TableCell>
+                                    <TableCell>{supplier.diachi}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Box>
+
             {/* Gửi email */}
             <Box>
                 <Button
                     variant="contained"
                     color="primary"
-                    disabled={!selectedSupplier || selectedMaterials.length === 0}
+                    disabled={selectedMaterials.length === 0 || suppliers.length === 0}
                     onClick={handleSendEmail}
                 >
                     Gửi Yêu Cầu Báo Giá

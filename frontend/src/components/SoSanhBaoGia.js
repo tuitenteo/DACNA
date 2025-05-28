@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } fro
 import * as XLSX from "xlsx";
 
 const SoSanhBaoGia = () => {
-    const [companyData, setCompanyData] = useState([]); // Lưu dữ liệu từ nhiều công ty
+    const [companyData, setCompanyData] = useState([]);
 
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
@@ -16,8 +16,6 @@ const SoSanhBaoGia = () => {
             const workbook = XLSX.read(binaryStr, { type: "binary" });
             const sheetName = workbook.SheetNames[0];
             const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-            // Thêm dữ liệu công ty mới vào danh sách
             setCompanyData((prevData) => [
                 ...prevData,
                 { companyName: file.name, data: sheetData },
@@ -35,7 +33,6 @@ const SoSanhBaoGia = () => {
 
     const getBestCompanyByTotal = (chartData) => {
         if (chartData.length === 0) return null;
-
         return chartData.reduce((best, company) => {
             return company.total < best.total ? company : best;
         });
@@ -43,12 +40,10 @@ const SoSanhBaoGia = () => {
 
     const getBestCompanyByItem = (companyData) => {
         const itemComparison = {};
-
         companyData.forEach((company) => {
             company.data.forEach((item) => {
                 const itemName = item["Tên Vật Tư"];
                 const itemPrice = parseFloat(item["Đơn Giá (VNĐ)"]?.toString().replace(/,/g, "") || 0);
-
                 if (!itemComparison[itemName] || itemPrice < itemComparison[itemName].price) {
                     itemComparison[itemName] = {
                         companyName: company.companyName,
@@ -57,7 +52,6 @@ const SoSanhBaoGia = () => {
                 }
             });
         });
-
         return itemComparison;
     };
 
@@ -68,6 +62,24 @@ const SoSanhBaoGia = () => {
 
     const bestCompanyByTotal = getBestCompanyByTotal(chartData);
     const bestCompanyByItem = getBestCompanyByItem(companyData);
+
+    // Tạo dữ liệu cho biểu đồ so sánh giá từng mặt hàng giữa các công ty
+    const allItems = Array.from(
+        new Set(companyData.flatMap(company =>
+            company.data.map(item => item["Tên Vật Tư"])
+        ))
+    );
+
+    const itemCompareChartData = allItems.map(itemName => {
+        const row = { itemName };
+        companyData.forEach(company => {
+            const found = company.data.find(item => item["Tên Vật Tư"] === itemName);
+            row[company.companyName.replace(".xlsx", "")] = found
+                ? parseFloat(found["Đơn Giá (VNĐ)"]?.toString().replace(/,/g, "") || 0)
+                : null;
+        });
+        return row;
+    });
 
     return (
         <Box sx={{ padding: "20px" }}>
@@ -83,14 +95,14 @@ const SoSanhBaoGia = () => {
                 />
             </Box>
 
-            {/* Hiển thị biểu đồ */}
+            {/* Hiển thị biểu đồ tổng tiền */}
             <Box sx={{ marginTop: "40px" }}>
                 <h3>Biểu Đồ So Sánh Báo Giá</h3>
                 {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={400}>
                         <BarChart
                             data={chartData}
-                            margin={{ top: 20, right: 30, left: 50, bottom: 5 }} // Tăng khoảng cách bên trái
+                            margin={{ top: 20, right: 30, left: 50, bottom: 5 }}
                         >
                             <XAxis dataKey="name" />
                             <YAxis
@@ -116,7 +128,46 @@ const SoSanhBaoGia = () => {
                     </Typography>
                 )}
                 <Typography variant="body1" sx={{ marginTop: "20px" }}>
-                    Công ty tốt nhất cho từng mặt hàng:
+                    So sánh giá từng mặt hàng giữa các công ty:
+                </Typography>
+                {/* Biểu đồ so sánh giá từng mặt hàng */}
+                {itemCompareChartData.length > 0 && (
+                    <ResponsiveContainer width="100%" height={itemCompareChartData.length * 60}>
+                        <BarChart
+                            data={itemCompareChartData}
+                            layout="vertical"
+                            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+                        >
+                            <XAxis
+                                type="number"
+                                allowDecimals={false}
+                                tickFormatter={(value) => value.toLocaleString("vi-VN")}
+                            />
+                            <YAxis
+                                dataKey="itemName"
+                                type="category"
+                                width={200}
+                            />
+                            <Tooltip
+                                formatter={(value) =>
+                                    value !== null ? value.toLocaleString("vi-VN") + " VNĐ" : "Không báo giá"
+                                }
+                                labelFormatter={(label) => `Mặt hàng: ${label}`}
+                            />
+                            <Legend />
+                            {companyData.map((company, idx) => (
+                                <Bar
+                                    key={company.companyName}
+                                    dataKey={company.companyName.replace(".xlsx", "")}
+                                    fill={["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#8dd1e1"][idx % 5]}
+                                    name={company.companyName.replace(".xlsx", "")}
+                                />
+                            ))}
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
+                <Typography variant="body2" sx={{ marginTop: "16px" }}>
+                    <strong>Lưu ý:</strong> Nếu một công ty không báo giá cho mặt hàng nào đó, cột sẽ không hiển thị.
                 </Typography>
                 <ul>
                     {Object.entries(bestCompanyByItem).map(([itemName, { companyName, price }]) => (

@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  password: "kyanh",
-    // password: "123123",
+  //password: "kyanh",
+     password: "123123",
   port: 5432,
 });
 
@@ -967,19 +967,20 @@ app.post("/api/lohang/upload", verifyToken, upload.single("file"), async (req, r
       await client.query("BEGIN"); // Bắt đầu transaction
 
       // Thêm lô hàng
-      const { idncc, tongtien, trangthai } = sheetData[0];
+      const trangthai = "Đã nhập";
+      const { idncc, tongtienthucte } = sheetData[0];
       const ngaydukiennhapkho = excelDateToJSDate(sheetData[0].ngaydukiennhapkho);
       const ngaythuctenhapkho = excelDateToJSDate(sheetData[0].ngaythuctenhapkho);
 
       const loHangResult = await client.query(
         `INSERT INTO lohang (idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho)
                  VALUES ($1, $2, $3, $4, $5) RETURNING idlohang`,
-        [idncc, tongtien, trangthai, ngaydukiennhapkho, ngaythuctenhapkho]
+        [idncc, tongtienthucte, trangthai, ngaydukiennhapkho, ngaythuctenhapkho]
       );
       const idlohang = loHangResult.rows[0].idlohang;
 
       // Lọc dữ liệu chi tiết lô hàng
-      const chiTietLoHang = sheetData.filter(row => row.idvattu && row.soluong && row.dongianhap);
+      const chiTietLoHang = sheetData.filter(row => row.idvattu && row.soluongthucte && row.dongianhap);
 
       // Kiểm tra nếu không có chi tiết lô hàng
       if (chiTietLoHang.length === 0) {
@@ -988,11 +989,11 @@ app.post("/api/lohang/upload", verifyToken, upload.single("file"), async (req, r
 
       // Thêm chi tiết lô hàng
       for (let i = 0; i < chiTietLoHang.length; i++) {
-        const { idvattu, soluong, dongianhap } = chiTietLoHang[i];
+        const { idvattu, soluongthucte, dongianhap } = chiTietLoHang[i];
         await client.query(
           `INSERT INTO chitietlohang (idlohang, idvattu, soluong, dongianhap)
                      VALUES ($1, $2, $3, $4)`,
-          [idlohang, idvattu, soluong, dongianhap]
+          [idlohang, idvattu, soluongthucte, dongianhap]
         );
       }
 
@@ -1004,11 +1005,11 @@ app.post("/api/lohang/upload", verifyToken, upload.single("file"), async (req, r
 
       // Thêm chi tiết nhập kho
       for (let i = 0; i < chiTietLoHang.length; i++) {
-        const { idvattu, soluong } = chiTietLoHang[i];
+        const { idvattu, soluongthucte } = chiTietLoHang[i];
         await client.query(
           `INSERT INTO chitietnhapkho (idnhapkho, idlohang, idvattu, idnguoidung, soluong)
                      VALUES ($1, $2, $3, $4, $5)`,
-          [idnhapkho, idlohang, idvattu, userId, soluong]
+          [idnhapkho, idlohang, idvattu, userId, soluongthucte]
         );
       }
 
