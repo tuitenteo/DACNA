@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { formatDateToDDMMYYYY } from "../utils/utils"; // Import formatDateToDDMMYYYY function
+import { formatDateToDDMMYYYY } from "../../utils/utils"; // Import formatDateToDDMMYYYY function
 
 const XuatKhoPdf = ({ phieuXuatKho }) => {
   const pdfRef = useRef(); // Tham chiếu đến nội dung cần in

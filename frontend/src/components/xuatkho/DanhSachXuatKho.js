@@ -17,10 +17,10 @@ import {
 import { SortByAlpha } from "@mui/icons-material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import "../styles/DanhSachXuatKho.css";
+import "../../styles/DanhSachXuatKho.css";
 import DownloadIcon from "@mui/icons-material/Download";
 import XuatKhoPdf from "./XuatKhoPdf"; // Import XuatKhoPdf
-import {formatDateToDDMMYYYY} from "../utils/utils"; // Import formatDateToDDMMYYYY function
+import { formatDateToDDMMYYYY } from "../../utils/utils"; // Import formatDateToDDMMYYYY function
 
 // Hàm định dạng ngày tháng năm 
 function parseLocalDate(str) {

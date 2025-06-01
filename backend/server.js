@@ -39,8 +39,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  //password: "kyanh",
-     password: "123123",
+  password: "kyanh",
+    //  password: "123123",
   port: 5432,
 });
 
@@ -605,14 +605,15 @@ app.post("/api/nhacungcap", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Tên nhà cung cấp đã tồn tại." });
     }
 
+    // chỉ test 1 email nên bỏ qua kiểm tra email
     // Kiểm tra trùng email
-    const checkEmail = await pool.query(
-      "SELECT * FROM nhacungcap WHERE email = $1",
-      [email]
-    );
-    if (checkEmail.rows.length > 0) {
-      return res.status(400).json({ message: "Email đã tồn tại." });
-    }
+    // const checkEmail = await pool.query(
+    //   "SELECT * FROM nhacungcap WHERE email = $1",
+    //   [email]
+    // );
+    // if (checkEmail.rows.length > 0) {
+    //   return res.status(400).json({ message: "Email đã tồn tại." });
+    // }
 
     // Kiểm tra trùng số điện thoại
     const checkPhone = await pool.query(
@@ -690,9 +691,9 @@ app.delete("/api/nhacungcap/:id", verifyToken, async (req, res) => {
 
 app.put("/api/nhacungcap/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
-  const { tenncc, sodienthoai, email, diachi, stk, mst } = req.body;
+  const { tenncc, sodienthoai, email, diachi, stk, mst, website } = req.body;
   // console.log("ID nhận được từ client:", id);
-  if (!tenncc || !sodienthoai || !email || !diachi || !stk || !mst) {
+  if (!tenncc || !sodienthoai || !email || !diachi || !stk || !mst || !website) {
     return res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
   }
 
@@ -711,13 +712,14 @@ app.put("/api/nhacungcap/:id", verifyToken, async (req, res) => {
     const result = await pool.query(
       `UPDATE nhacungcap 
        SET tenncc = $1, 
-           sodienthoai = $2, 
-           email = $3, 
-           diachi = $4, 
-           stk = $5, 
-           mst = $6 
-       WHERE idncc = $7 RETURNING *`,
-      [tenncc, sodienthoai, email, diachi, stk, mst, id]
+          sodienthoai = $2, 
+          email = $3, 
+          diachi = $4, 
+          stk = $5, 
+          mst = $6,
+          website = $7 
+       WHERE idncc = $8 RETURNING *`,
+      [tenncc, sodienthoai, email, diachi, stk, mst, website, id]
     );
 
     res.status(200).json({
@@ -1256,10 +1258,13 @@ app.get("/api/thanh-toan", verifyToken, async (req, res) => {
                 lh.idlohang,
                 lh.tongtien,
                 COALESCE(SUM(tt.sotienthanhtoan), 0) AS sotienthanhtoan,
-                (lh.tongtien - COALESCE(SUM(tt.sotienthanhtoan), 0)) AS congno
+                (lh.tongtien - COALESCE(SUM(tt.sotienthanhtoan), 0)) AS congno,
+                ncc.tenncc,
+                ncc.stk                
             FROM lohang lh
             LEFT JOIN banglsthanhtoan tt ON lh.idlohang = tt.idlohang
-            GROUP BY lh.idlohang, lh.tongtien
+            LEFT JOIN nhacungcap ncc ON lh.idncc = ncc.idncc
+            GROUP BY lh.idlohang, lh.tongtien, ncc.tenncc, ncc.stk
         `);
 
         res.status(200).json(result.rows);
@@ -1273,25 +1278,28 @@ app.get("/api/thanh-toan", verifyToken, async (req, res) => {
 app.post("/api/thanh-toan", verifyToken, async (req, res) => {
     const { idlohang, sotienthanhtoan, mota } = req.body;
 
-    if (!idlohang || !sotienthanhtoan || sotienthanhtoan <= 0) {
+    if (!idlohang || !sotienthanhtoan || isNaN(sotienthanhtoan)) {
         return res.status(400).json({ message: "Thông tin thanh toán không hợp lệ." });
+    }
+
+    const soTienThanhToanMoi = parseFloat(sotienthanhtoan);
+    if (soTienThanhToanMoi <= 0) {
+        return res.status(400).json({ message: "Số tiền thanh toán phải lớn hơn 0." });
     }
 
     const client = await pool.connect();
     try {
-        await client.query("BEGIN"); // Bắt đầu transaction
+        await client.query("BEGIN");
 
         // Kiểm tra lô hàng tồn tại
         const loHangResult = await client.query(
             `SELECT tongtien FROM lohang WHERE idlohang = $1`,
             [idlohang]
         );
-
         if (loHangResult.rows.length === 0) {
             throw new Error("Lô hàng không tồn tại.");
         }
-
-        const tongTien = parseFloat(loHangResult.rows[0].tongtien); // Chuyển đổi sang số
+        const tongTien = parseFloat(loHangResult.rows[0].tongtien);
 
         // Tính tổng số tiền đã thanh toán
         const thanhToanResult = await client.query(
@@ -1299,14 +1307,15 @@ app.post("/api/thanh-toan", verifyToken, async (req, res) => {
              FROM banglsthanhtoan WHERE idlohang = $1`,
             [idlohang]
         );
+        const tongThanhToan = parseFloat(thanhToanResult.rows[0].tongthanhtoan);
 
-        const tongThanhToan = parseFloat(thanhToanResult.rows[0].tongthanhtoan); // Chuyển đổi sang số
+        // Tính số tiền còn nợ
+        const congNo = tongTien - tongThanhToan;
 
-        // Kiểm tra nếu số tiền thanh toán vượt quá tổng tiền
-        const soTienThanhToanMoi = parseFloat(sotienthanhtoan); // Chuyển đổi sang số
-        if (tongThanhToan + soTienThanhToanMoi > tongTien) {
-            console.error(`Lỗi: Tổng thanh toán (${tongThanhToan + soTienThanhToanMoi}) vượt quá tổng tiền (${tongTien}).`);
-            throw new Error(`Lỗi: Tổng thanh toán (${tongThanhToan + soTienThanhToanMoi}) vượt quá tổng tiền (${tongTien}).`);
+        // Kiểm tra nếu số tiền thanh toán vượt quá số còn nợ
+        if (soTienThanhToanMoi > congNo) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ message: "Số tiền thanh toán không được vượt quá số tiền còn lại." });
         }
 
         // Thêm thông tin thanh toán
@@ -1316,10 +1325,10 @@ app.post("/api/thanh-toan", verifyToken, async (req, res) => {
             [idlohang, soTienThanhToanMoi, mota]
         );
 
-        await client.query("COMMIT"); // Commit transaction
+        await client.query("COMMIT");
         res.status(201).json({ message: "Thanh toán thành công." });
     } catch (err) {
-        await client.query("ROLLBACK"); // Rollback nếu có lỗi
+        await client.query("ROLLBACK");
         console.error("Lỗi khi thanh toán:", err);
         res.status(500).json({ message: err.message });
     } finally {
@@ -1328,9 +1337,11 @@ app.post("/api/thanh-toan", verifyToken, async (req, res) => {
 });
 
 // xem lịch sử thanh toán
-app.get("/api/lich-su-thanh-toan", verifyToken, async (req, res) => {
+app.get("/api/lich-su-thanh-toan/:idlohang", verifyToken, async (req, res) => {
+    const { idlohang } = req.params;
     try {
-        const result = await pool.query(`
+        // Lấy lịch sử thanh toán của lô hàng
+        const historyResult = await pool.query(`
             SELECT 
                 tt.idthanhtoan,
                 tt.idlohang,
@@ -1338,12 +1349,30 @@ app.get("/api/lich-su-thanh-toan", verifyToken, async (req, res) => {
                 tt.mota,
                 tt.ngaythanhtoan
             FROM banglsthanhtoan tt
+            WHERE tt.idlohang = $1
             ORDER BY tt.ngaythanhtoan DESC
-        `);
+        `, [idlohang]);
 
-        res.status(200).json(result.rows);
+        // Lấy tổng tiền và tổng đã thanh toán của lô hàng
+        const summaryResult = await pool.query(`
+            SELECT 
+                lh.tongtien,
+                COALESCE(SUM(tt.sotienthanhtoan), 0) AS tongthanhtoan,
+                (lh.tongtien - COALESCE(SUM(tt.sotienthanhtoan), 0)) AS congno,
+                ncc.tenncc
+            FROM lohang lh
+            LEFT JOIN banglsthanhtoan tt ON lh.idlohang = tt.idlohang
+            LEFT JOIN nhacungcap ncc ON lh.idncc = ncc.idncc
+            WHERE lh.idlohang = $1
+            GROUP BY lh.idlohang,lh.tongtien, ncc.tenncc
+        `, [idlohang]);
+
+        res.status(200).json({
+            history: historyResult.rows,
+            summary: summaryResult.rows[0] || { tongtien: 0, tongthanhtoan: 0, congno: 0 }
+        });
     } catch (err) {
-        console.error("Lỗi khi lấy lịch sử thanh toán:", err);
+        console.error("Lỗi khi lấy lịch sử thanh toán theo lô hàng:", err);
         res.status(500).json({ message: "Có lỗi xảy ra khi lấy lịch sử thanh toán." });
     }
 });

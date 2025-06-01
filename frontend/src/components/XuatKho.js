@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import XuatKhoPdf from "./XuatKhoPdf";
-import DanhSachXuatKho from "./DanhSachXuatKho";
+import XuatKhoPdf from "./xuatkho/XuatKhoPdf";
+import DanhSachXuatKho from "./xuatkho/DanhSachXuatKho";
 import {
   Dialog,
   DialogTitle,
@@ -198,7 +198,7 @@ const XuatKho = () => {
           <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
             <Grid container spacing={2}>
               {/* Bên trái */}
-              <Grid item xs={6}>
+              <Grid>
                 <Box sx={{ marginBottom: 2 }}>
                   <TextField
                     label="Người Yêu Cầu"
@@ -376,7 +376,7 @@ const XuatKho = () => {
               </Grid>
 
               {/* Bên phải: Danh sách vật tư đã thêm */}
-              <Grid item xs={6} style={{ marginLeft: "30px" }}>
+              <Grid style={{ marginLeft: "30px" }}>
                 <TableContainer component={Paper}>
                   <Table>
                     <TableHead>
@@ -384,7 +384,7 @@ const XuatKho = () => {
                         <TableCell>ID Vật Tư</TableCell>
                         <TableCell>Tên Vật Tư</TableCell>
                         <TableCell>Số Lượng</TableCell>
-                        <TableCell>Đơn Giá</TableCell>
+                        <TableCell>Đơn Giá (VNĐ)</TableCell>
                         <TableCell>Hành Động</TableCell>
                       </TableRow>
                     </TableHead>

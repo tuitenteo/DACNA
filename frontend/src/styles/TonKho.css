@@ -1,24 +1,39 @@
-.da-het-han {
-    background-color: #d9d9d9 !important; /* Màu đỏ */
+.ton-kho-du,
+.ton-kho-du td {
+    background-color: #38b000 !important;
+    color: white !important;
+}
+.ton-kho-it,
+.ton-kho-it td {
+    background-color: #fb8500 !important;
+    color: white !important;
+}
+.sap-het-han,
+.sap-het-han td {
+    background-color: #e01e37 !important;
+    color: white !important;
+}
+.da-het-han,
+.da-het-han td {
+    background-color: #d9d9d9 !important;
+    color: grey !important;
+}
+.het-vat-tu,
+.het-vat-tu td {
+    background-color: #e5e5e5 !important;
     color: grey !important;
 }
 
-.sap-het-han {
-    background-color: #e01e37 !important; /* Màu cam */
-    color: white !important;
+.button-group-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-.ton-kho-it {
-    background-color: #fb8500 !important; /* Màu vàng */
-    color: white !important;
-}
-
-.ton-kho-du {
-    background-color: #38b000 !important; /* Màu xanh lá */
-    color: white !important;
-}
-
-.het-vat-tu {
-    background-color: #e5e5e5 !important; /* Màu xám nhạt */
-    color: grey !important; /* Màu chữ đen */
+.button-group-container .MuiButton-root {
+    border-radius: 4px !important; /* Bo góc cho nút */
+    min-width: 100px;
+    margin-right: 8px; /* Khoảng cách giữa các nút */
+    border-right: 1px solid #bdbdbd !important;
+    text-transform: none !important;
 }

@@ -275,7 +275,6 @@ const NhaCungCap = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Mã số</TableCell>
               <TableCell>Tên Nhà Cung Cấp</TableCell>
               <TableCell>Số Điện Thoại</TableCell>
               <TableCell>Email</TableCell>
@@ -289,7 +288,6 @@ const NhaCungCap = () => {
           <TableBody>
             {paginatedNhaCungCap.map((ncc) => (
               <TableRow key={ncc.idncc}>
-                <TableCell>{ncc.idncc}</TableCell>
                 <TableCell>{ncc.tenncc}</TableCell>
                 <TableCell>{ncc.sodienthoai}</TableCell>
                 <TableCell>{ncc.email}</TableCell>

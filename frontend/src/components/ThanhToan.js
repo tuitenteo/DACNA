@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+//import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
     Box,
@@ -8,17 +8,14 @@ import {
     TableRow,
     TableCell,
     TableBody,
-    Typography,
     Paper,
     TableContainer,
     Button,
     TextField,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     TablePagination
 } from "@mui/material";
+import LichSuThanhToan from "./thanhtoan/LichSuThanhToan";
+import ThanhToanLoHang from "./thanhtoan/ThanhToanLoHang";
 
 const ThanhToan = () => {
   const [loHangList, setLoHangList] = useState([]);
@@ -26,12 +23,12 @@ const ThanhToan = () => {
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedLoHang, setSelectedLoHang] = useState(null);
-  const [soTienThanhToan, setSoTienThanhToan] = useState("");
-  const [moTa, setMoTa] = useState("");
   const [searchQuery, setSearchQuery] = useState(""); // State để lưu giá trị tìm kiếm
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
   const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng hiển thị mỗi trang
   const [currentPage, setCurrentPage] = useState(0); // Trang hiện tại
+  const [openHistory, setOpenHistory] = useState(false);
+  const [historyLoHang, setHistoryLoHang] = useState(null);
 
   useEffect(() => {
     const fetchThanhToan = async () => {
@@ -71,41 +68,35 @@ const ThanhToan = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedLoHang(null);
-    setSoTienThanhToan("");
-    setMoTa("");
   };
 
-  const handleThanhToan = async () => {
-    if (!soTienThanhToan || parseInt(soTienThanhToan) <= 0) {
-      alert("Số tiền thanh toán phải lớn hơn 0.");
-      return;
-    }
-
+  const reloadData = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      await axios.post(
-        "http://localhost:5000/api/thanh-toan",
-        {
-          idlohang: selectedLoHang.idlohang,
-          sotienthanhtoan: parseInt(soTienThanhToan),
-          mota: moTa,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      alert("Thanh toán thành công!");
-      handleCloseDialog();
-      // Cập nhật lại danh sách lô hàng
       const response = await axios.get("http://localhost:5000/api/thanh-toan", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setLoHangList(response.data);
+      const data = response.data.map((loHang) => ({
+        ...loHang,
+        congno: parseFloat(loHang.congno),
+        sotienthanhtoan: parseFloat(loHang.sotienthanhtoan),
+      }));
+      setLoHangList(data);
     } catch (err) {
-      console.error("Lỗi khi thanh toán:", err);
-      alert("Có lỗi xảy ra khi thanh toán.");
+      setError("Có lỗi xảy ra khi lấy danh sách thanh toán.");
     }
+    setLoading(false);
+  };
+
+  const handleOpenHistory = (loHang) => {
+    setHistoryLoHang(loHang.idlohang);
+    setOpenHistory(true);
+  };
+
+  const handleCloseHistory = () => {
+    setOpenHistory(false);
+    setHistoryLoHang(null);
   };
 
   if (loading) {
@@ -128,19 +119,8 @@ const ThanhToan = () => {
   );
 
   return (
-    <Box sx={{ padding: "20px" }}>
+    <Box sx={{ padding: "10px" }}>
       <h1 style={{ textAlign: "center" }}>Thanh Toán Lô Hàng</h1>
-
-      {/* Nút chuyển đến Lịch Sử Thanh Toán */}
-      <Box sx={{ marginBottom: "20px", textAlign: "right" }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate("/dashboard/lich-su-thanh-toan")}
-        >
-          Xem Lịch Sử Thanh Toán
-        </Button>
-      </Box>
 
       {/* Ô tìm kiếm */}
       <Box sx={{ marginBottom: "20px" }}>
@@ -158,16 +138,19 @@ const ThanhToan = () => {
           <TableHead>
             <TableRow>
               <TableCell>Mã Lô Hàng</TableCell>
+              <TableCell>Nhà Cung Cấp</TableCell>
               <TableCell>Tổng Tiền (VNĐ)</TableCell>
               <TableCell>Đã Thanh Toán (VNĐ)</TableCell>
               <TableCell>Công Nợ (VNĐ)</TableCell>
               <TableCell>Hành Động</TableCell>
+              <TableCell>Xem lịch sử</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {paginatedLoHangList.map((loHang) => (
               <TableRow key={loHang.idlohang}>
                 <TableCell>{loHang.idlohang}</TableCell>
+                <TableCell>{loHang.tenncc}</TableCell>
                 <TableCell>{loHang.tongtien.toLocaleString("vi-VN")}</TableCell>
                 <TableCell>
                   {loHang.sotienthanhtoan.toLocaleString("vi-VN")}
@@ -188,6 +171,15 @@ const ThanhToan = () => {
                     disabled={loHang.congno === 0} // Disable nếu công nợ bằng 0
                   >
                     Thanh Toán
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    onClick={() => handleOpenHistory(loHang)}
+                  >
+                    Xem lịch sử
                   </Button>
                 </TableCell>
               </TableRow>
@@ -213,39 +205,19 @@ const ThanhToan = () => {
       />
 
       {/* Dialog thanh toán */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Thanh Toán Lô Hàng</DialogTitle>
-        <DialogContent>
-          <Typography gutterBottom>
-            Mã Lô Hàng: {selectedLoHang?.idlohang}
-          </Typography>
-          <Typography gutterBottom>
-            Công Nợ: {selectedLoHang?.congno.toLocaleString("vi-VN")} VNĐ
-          </Typography>
-          <TextField
-            label="Số Tiền Thanh Toán"
-            type="number"
-            fullWidth
-            value={soTienThanhToan}
-            onChange={(e) => setSoTienThanhToan(e.target.value)}
-            sx={{ marginBottom: "20px" }}
-          />
-          <TextField
-            label="Mô Tả"
-            multiline
-            rows={3}
-            fullWidth
-            value={moTa}
-            onChange={(e) => setMoTa(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button variant="contained" color="primary" onClick={handleThanhToan}>
-            Thanh Toán
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ThanhToanLoHang
+        open={openDialog}
+        onClose={handleCloseDialog}
+        loHang={selectedLoHang}
+        onSuccess={reloadData}
+      />
+
+      {/* Dialog lịch sử thanh toán */}
+      <LichSuThanhToan
+        open={openHistory}
+        onClose={handleCloseHistory}
+        idLoHang={historyLoHang}
+      />
     </Box>
   );
 };

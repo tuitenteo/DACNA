@@ -13,6 +13,7 @@ import {
   TablePagination,
   Button,
   TextField,
+  ButtonGroup
 } from "@mui/material";
 import { formatDateToDDMMYYYY } from "../utils/utils";
 import { Add } from "@mui/icons-material";
@@ -188,43 +189,51 @@ const handleOpenNhapModal = (idVatTu) => {
           />
         </Button>
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between", // Căn đều các phần tử
-          marginBottom: "20px",
-        }}
-      >
-        {/* Dropdown chọn chế độ hiển thị */}
-        <select
-          value={view}
-          onChange={(e) => setView(e.target.value)}
-          style={{
-            padding: "10px",
-            marginBottom: "1px",
-            fontSize: "16px",
-            border: "1px solid #ccc",
-            borderRadius: "5px",
-          }}
-        >
-          <option value="all">Hiển thị toàn bộ</option>
-          <option value="tonKhoDu" className="ton-kho-du">
+      {/* Button group chế độ hiển thị */}
+      <div className="button-group-container">
+        <ButtonGroup variant="outlined" color="primary">
+          <Button
+            variant={view === "all" ? "contained" : "outlined"}
+            onClick={() => setView("all")}
+          >
+            Toàn bộ
+          </Button>
+          <Button
+            variant={view === "tonKhoDu" ? "contained" : "outlined"}
+            onClick={() => setView("tonKhoDu")}
+            className="ton-kho-du"
+          >
             Ổn định
-          </option>
-          <option value="soLuongIt" className="ton-kho-it">
+          </Button>
+          <Button
+            variant={view === "soLuongIt" ? "contained" : "outlined"}
+            onClick={() => setView("soLuongIt")}
+            className="ton-kho-it"
+          >
             Tồn kho ít
-          </option>
-          <option value="sapHetHan" className="sap-het-han">
+          </Button>
+          <Button
+            variant={view === "sapHetHan" ? "contained" : "outlined"}
+            onClick={() => setView("sapHetHan")}
+            className="sap-het-han"
+          >
             Sắp hết hạn
-          </option>
-          <option value="daHetHan" className="da-het-han">
+          </Button>
+          <Button
+            variant={view === "daHetHan" ? "contained" : "outlined"}
+            onClick={() => setView("daHetHan")}
+            className="da-het-han"
+          >
             Đã hết hạn
-          </option>
-          <option value="hetVatTu" className="het-vat-tu">
+          </Button>
+          <Button
+            variant={view === "hetVatTu" ? "contained" : "outlined"}
+            onClick={() => setView("hetVatTu")}
+            className="het-vat-tu"
+          >
             Hết vật tư
-          </option>
-        </select>
+          </Button>
+        </ButtonGroup>
       </div>
 
       {/* Bảng tồn kho */}

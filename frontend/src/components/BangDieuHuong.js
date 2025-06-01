@@ -45,7 +45,7 @@ import SoSanhBaoGia from "./SoSanhBaoGia";
 import LoHang from "./LoHang";
 import ThemLoHang from "./ThemLoHang";
 import ThanhToan from "./ThanhToan";
-import LichSuThanhToan from "./LichSuThanhToan";
+import LichSuThanhToan from "./thanhtoan/LichSuThanhToan";
 import logo from "../assets/myicon.png";
 import { useTheme } from "@mui/material/styles";
 

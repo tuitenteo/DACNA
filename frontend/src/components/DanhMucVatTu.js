@@ -177,7 +177,7 @@ const DanhMucVatTu = () => {
         style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}
       >
         <TextField
-          placeholder="Tìm kiếm theo tên hoặc vai trò..."
+          placeholder="Tìm kiếm theo tên vật tư..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ marginRight: "10px", width: "400px" }}
@@ -197,27 +197,6 @@ const DanhMucVatTu = () => {
             }}
           />
         </Button>
-        <label style={{ marginLeft: "auto" }}>
-          Số dòng hiển thị:
-          <select
-            value={rowsPerPage}
-            onChange={(e) => setRowsPerPage(Number(e.target.value))}
-            style={{
-              padding: "8px",
-              marginLeft: "10px",
-              fontSize: "16px",
-              border: "1px solid #ccc",
-              borderRadius: "5px",
-            }}
-          >
-            <option value="" disabled hidden>
-              Số dòng
-            </option>
-            <option value={5}>5 dòng</option>
-            <option value={10}>10 dòng</option>
-            <option value={20}>20 dòng</option>
-          </select>
-        </label>
       </div>
 
       {vatTu.length > 0 ? (
