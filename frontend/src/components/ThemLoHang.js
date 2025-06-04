@@ -171,17 +171,25 @@ const ThemLoHang = () => {
                                 <TableCell>Tên Vật Tư</TableCell>
                                 <TableCell>Số lượng dự kiến sẽ nhập</TableCell>
                                 <TableCell>Số lượng tồn kho hiện tại</TableCell>
+                                <TableCell>Số lượng sau khi nhập</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {vatTuInfo.map((row) => (
-                                <TableRow key={row.idvattu}>
-                                    <TableCell>{row.idvattu}</TableCell>
-                                    <TableCell>{row.tenvattu}</TableCell>
-                                    <TableCell>{row.soluong_excel}</TableCell>
-                                    <TableCell>{row.tonkhohientai}</TableCell>
-                                </TableRow>
-                            ))}
+                            {vatTuInfo.map((row) => {
+                                // Chuyển về số nếu có thể, nếu không thì để trống
+                                const soLuongNhap = Number(row.soluong_excel) || 0;
+                                const tonKhoHienTai = Number(row.tonkhohientai) || 0;
+                                const soLuongSauKhiNhap = soLuongNhap + tonKhoHienTai;
+                                return (
+                                    <TableRow key={row.idvattu}>
+                                        <TableCell>{row.idvattu}</TableCell>
+                                        <TableCell>{row.tenvattu}</TableCell>
+                                        <TableCell>{row.soluong_excel}</TableCell>
+                                        <TableCell>{row.tonkhohientai}</TableCell>
+                                        <TableCell>{soLuongSauKhiNhap}</TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </Box>

@@ -46,6 +46,7 @@ import LoHang from "./LoHang";
 import ThemLoHang from "./ThemLoHang";
 import ThanhToan from "./ThanhToan";
 import LichSuThanhToan from "./thanhtoan/LichSuThanhToan";
+import ChatBot from "./ChatBot";
 import logo from "../assets/myicon.png";
 import { useTheme } from "@mui/material/styles";
 
@@ -315,6 +316,20 @@ const BangDieuHuong = () => {
                       sx={{ color: theme.palette.text.primary }}
                     />
                   </ListItem>
+                  <ListItem
+                    sx={{ pl: 4 }}
+                    component={Link}
+                    to="/dashboard/chatbot"
+                    selected={location.pathname.includes("chatbot")}
+                  >
+                    <ListItemIcon>
+                      <BarChart sx={{ color: getIconColor("chatbot") }} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="AI Analyzer"
+                      sx={{ color: theme.palette.text.primary }}
+                    />
+                  </ListItem>
                 </List>
               </Collapse>
 
@@ -411,6 +426,7 @@ const BangDieuHuong = () => {
               <Route path="thanh-toan" element={<ThanhToan />} />
               <Route path="/dashboard/thanh-toan/:idlohang" element={<ThanhToan />} />
               <Route path="lich-su-thanh-toan" element={<LichSuThanhToan />} />
+              <Route path="chatbot" element={<ChatBot />} />
             </Routes>
           </Suspense>
         </Box>
