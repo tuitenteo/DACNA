@@ -11,6 +11,7 @@ const nodemailer = require("nodemailer");
 const { exec } = require("child_process");
 const xlsx = require("xlsx");
 const fs = require("fs");
+const fetch = require("node-fetch");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -39,8 +40,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  password: "kyanh",
-    //  password: "123123",
+  //password: "kyanh",
+      password: "123123",
   port: 5432,
 });
 
@@ -1375,6 +1376,27 @@ app.get("/api/lich-su-thanh-toan/:idlohang", verifyToken, async (req, res) => {
         console.error("Lỗi khi lấy lịch sử thanh toán theo lô hàng:", err);
         res.status(500).json({ message: "Có lỗi xảy ra khi lấy lịch sử thanh toán." });
     }
+});
+
+app.post("/api/ayd", async (req, res) => {
+  try {
+    const response = await fetch("https://www.askyourdatabase.com/api/chatbot/v2/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer 2ffe538666201f4034dba196e23b2633a42887a38c17ad9e80927024d21be665", // Thay bằng API key thật
+      },
+      body: JSON.stringify({
+        "chatbotid": "a37a06f45e54ed59b8796080338d321c",
+        "name": process.env.EMAIL_PASSWORD,
+        "email": process.env.EMAIL_USER
+      }),
+    });
+    const data = await response.json();
+    res.json({ url: data.url });
+  } catch (err) {
+    res.status(500).json({ error: "Chatbot API error" });
+  }
 });
 
 app.listen(port, () => {
