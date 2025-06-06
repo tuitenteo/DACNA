@@ -39,7 +39,7 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-  password: "kyanh",
+  password: "051203",
     //  password: "123123",
   port: 5432,
 });
@@ -283,7 +283,7 @@ app.post("/api/dangnhap", async (req, res) => {
     }
 
     // So sánh mật khẩu gốc
-    if (matkhau !== user.rows[0].matkhau) {
+    if (matkhau.trim() !== user.rows[0].matkhau.trim()) {
       return res.status(401).json({ message: "Mật khẩu không đúng" });
     }
 
