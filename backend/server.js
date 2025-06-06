@@ -11,6 +11,7 @@ const nodemailer = require("nodemailer");
 const { exec } = require("child_process");
 const xlsx = require("xlsx");
 const fs = require("fs");
+const fetch = require("node-fetch");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -39,8 +40,13 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
+<<<<<<< HEAD
   password: "051203",
     //  password: "123123",
+=======
+  password: "kyanh",
+      // password: "123123",
+>>>>>>> upstream/main
   port: 5432,
 });
 
@@ -334,15 +340,16 @@ app.get("/api/vattu", verifyToken, async (req, res) => {
         VT.NgayHetHan, 
         VT.CachLuuTru, 
         TK.TonKhoHienTai,
+        TK.tonkhothucte,
         CTLH.DonGiaNhap AS DonGia
       FROM TonKho TK
       LEFT JOIN VatTu VT ON TK.IDVatTu = VT.IDVatTu
       LEFT JOIN DanhMucVatTu DM ON VT.IDDanhMuc = DM.IDDanhMuc
       LEFT JOIN (
-  SELECT IDVatTu, MAX(DonGiaNhap) AS DonGiaNhap
-  FROM ChiTietLoHang
-  GROUP BY IDVatTu
-) CTLH ON VT.IDVatTu = CTLH.IDVatTu
+        SELECT IDVatTu, MAX(DonGiaNhap) AS DonGiaNhap
+        FROM ChiTietLoHang
+        GROUP BY IDVatTu
+      ) CTLH ON VT.IDVatTu = CTLH.IDVatTu
     `;
 
     const params = [];
@@ -398,8 +405,8 @@ app.post("/xuatkho", verifyToken, async (req, res) => {
         throw new Error(`Vật tư với ID ${IDVatTu} không tồn tại.`);
       }
 
-      const stockRes = await client.query("SELECT TonKhoHienTai FROM TonKho WHERE IDVatTu = $1", [IDVatTu]);
-      const stock = stockRes.rows[0]?.tonkhohientai ?? 0;
+      const stockRes = await client.query("SELECT TonKhoThucTe FROM TonKho WHERE IDVatTu = $1", [IDVatTu]);
+      const stock = stockRes.rows[0]?.tonkhothucte ?? 0;
 
       if (SoLuong > stock) {
         throw new Error(`Số lượng vượt tồn kho hiện tại cho vật tư ID ${IDVatTu}.`);
@@ -521,7 +528,8 @@ app.get("/tonkho", verifyToken, async (req, res) => {
         ngayhethan,
         tongnhap,
         tongxuat,
-        tonkhohientai
+        tonkhohientai,
+        tonkhothucte
       FROM tonkho
     `);
     res.status(200).json(result.rows);
@@ -530,6 +538,29 @@ app.get("/tonkho", verifyToken, async (req, res) => {
     res.status(500).json({ error: "Có lỗi xảy ra khi lấy dữ liệu tồn kho." });
   }
 });
+
+app.get("/api/kiemke/:idvattu/lichsu", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        lskk.ngaycapnhat,
+        nd.tendangnhap,
+        lskk.soluonghaohut,
+        lskk.noidung
+      FROM lichsukiemke lskk
+      LEFT JOIN kiemke k ON lskk.idkiemke = k.idkiemke
+      LEFT JOIN nguoidung nd ON k.idnguoidung = nd.idnguoidung
+      WHERE lskk.idvattu = $1
+      ORDER BY lskk.ngaycapnhat DESC
+    `, [idvattu]);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Lỗi khi lấy lịch sử kiểm kê:", err);
+    res.status(500).json({ message: "Có lỗi xảy ra khi lấy lịch sử kiểm kê." });
+  }
+});
+
 
 app.get("/api/nhacungcap", verifyToken, async (req, res) => {
   try {
@@ -1375,6 +1406,110 @@ app.get("/api/lich-su-thanh-toan/:idlohang", verifyToken, async (req, res) => {
         console.error("Lỗi khi lấy lịch sử thanh toán theo lô hàng:", err);
         res.status(500).json({ message: "Có lỗi xảy ra khi lấy lịch sử thanh toán." });
     }
+});
+
+app.post("/api/ayd", async (req, res) => {
+  try {
+    const response = await fetch("https://www.askyourdatabase.com/api/chatbot/v2/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer 8e5642b2edecb11612c622d6196377be3542873bc22e16c4b8be63bcdead052f", // Thay bằng API key thật
+      },
+      body: JSON.stringify({
+        "chatbotid": "a8f3abb5902386cebaafe8bcdfcd1aa4",
+        "name": process.env.EMAIL_PASSWORD,
+        "email": process.env.EMAIL_USER
+      }),
+    });
+    const data = await response.json();
+    res.json({ url: data.url });
+  } catch (err) {
+    res.status(500).json({ error: "Chatbot API error" });
+  }
+});
+
+// Thêm vật tư mới
+app.post("/api/vattu", verifyToken, async (req, res) => {
+  const { tenvattu, iddanhmuc, donvi, mota, ngayhethan, cachluutru } = req.body;
+  if (!tenvattu || !iddanhmuc || !donvi || !mota || !ngayhethan || !cachluutru) { 
+    return res.status(400).json({ message: "Hãy điền đầy đủ các thông tin" });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO vattu (tenvattu, iddanhmuc, donvi, mota, ngayhethan, cachluutru)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [tenvattu, iddanhmuc, donvi, mota, ngayhethan, cachluutru]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error("Lỗi thêm vật tư:", err);
+    res.status(500).json({ message: "Có lỗi khi thêm vật tư." });
+  }
+});
+
+// Sửa vật tư
+app.put("/api/vattu/:idvattu", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  const { tenvattu, iddanhmuc, donvi, mota, ngayhethan, cachluutru } = req.body;
+  if (!tenvattu || !iddanhmuc) {
+    return res.status(400).json({ message: "Tên vật tư và danh mục là bắt buộc." });
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE vattu SET tenvattu=$1, iddanhmuc=$2, donvi=$3, mota=$4, ngayhethan=$5, cachluutru=$6
+       WHERE idvattu=$7 RETURNING *`,
+      [tenvattu, iddanhmuc, donvi, mota, ngayhethan, cachluutru, idvattu]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Không tìm thấy vật tư." });
+    }
+
+    // Lấy thêm tên danh mục
+    const vattu = result.rows[0];
+    const dmRes = await pool.query(
+      "SELECT tendanhmuc FROM danhmucvattu WHERE iddanhmuc = $1",
+      [vattu.iddanhmuc]
+    );
+    const tendanhmuc = dmRes.rows[0]?.tendanhmuc || null;
+
+    res.json({ success: true, data: { ...vattu, tendanhmuc } });
+  } catch (err) {
+    console.error("Lỗi sửa vật tư:", err);
+    res.status(500).json({ message: "Có lỗi khi sửa vật tư." });
+  }
+});
+
+app.delete("/api/vattu/:idvattu", verifyToken, async (req, res) => {
+  const { idvattu } = req.params;
+  try {
+    // Kiểm tra vật tư có liên quan đến kiểm kê hoặc lịch sử kiểm kê không
+    const kiemkeCheck = await pool.query(
+      "SELECT 1 FROM kiemke WHERE idnguoidung IN (SELECT idnguoidung FROM lichsukiemke WHERE idvattu = $1) LIMIT 1",
+      [idvattu]
+    );
+    const lichsuCheck = await pool.query(
+      "SELECT 1 FROM lichsukiemke WHERE idvattu = $1 LIMIT 1",
+      [idvattu]
+    );
+
+    if (kiemkeCheck.rows.length > 0 || lichsuCheck.rows.length > 0) {
+      return res.status(400).json({ message: "Không thể xóa vật tư đã có kiểm kê hoặc lịch sử kiểm kê." });
+    }
+
+    // Xóa vật tư
+    const result = await pool.query(
+      "DELETE FROM vattu WHERE idvattu = $1 RETURNING *",
+      [idvattu]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Vật tư không tồn tại." });
+    }
+    res.json({ success: true, message: "Xóa vật tư thành công." });
+  } catch (err) {
+    console.error("Lỗi xóa vật tư:", err);
+    res.status(500).json({ message: "Có lỗi khi xóa vật tư." });
+  }
 });
 
 app.listen(port, () => {

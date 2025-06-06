@@ -51,14 +51,18 @@ const BaoGia = () => {
             return res.data;
           })
         );
-        let commonSuppliers = supplierLists[0] || [];
-        for (let i = 1; i < supplierLists.length; i++) {
-          commonSuppliers = commonSuppliers.filter((sup) =>
-            supplierLists[i].some((s) => s.idncc === sup.idncc)
-          );
+        // Lấy hợp các nhà cung cấp (không trùng lặp)
+        const allSuppliers = supplierLists.flat();
+        const uniqueSuppliers = [];
+        const seen = new Set();
+        for (const sup of allSuppliers) {
+          if (!seen.has(sup.idncc)) {
+            uniqueSuppliers.push(sup);
+            seen.add(sup.idncc);
+          }
         }
-        setSuppliers(commonSuppliers);
-        setSelectedSuppliers(commonSuppliers.map((s) => s.idncc)); // Mặc định chọn hết
+        setSuppliers(uniqueSuppliers);
+        setSelectedSuppliers(uniqueSuppliers.map((s) => s.idncc)); // Mặc định chọn hết
       } catch (error) {
         console.error("Lỗi khi lấy danh sách nhà cung cấp:", error);
         setSuppliers([]);
