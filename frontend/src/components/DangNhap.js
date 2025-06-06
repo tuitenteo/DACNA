@@ -28,6 +28,8 @@ const DangNhap = () => {
       localStorage.setItem("userId", response.data.user.idnguoidung);
       //console.log("JWT Token:", response.data.token);
       //console.log("Vai trò người dùng:", response.data.user.vaitro);
+      console.log("Gửi đi:", tendangnhap, matkhau);
+
 
       navigate("/dashboard");
     } catch (error) {

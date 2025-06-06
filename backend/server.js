@@ -40,13 +40,9 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "QLNK",
-<<<<<<< HEAD
   password: "051203",
     //  password: "123123",
-=======
-  password: "kyanh",
-      // password: "123123",
->>>>>>> upstream/main
+
   port: 5432,
 });
 
